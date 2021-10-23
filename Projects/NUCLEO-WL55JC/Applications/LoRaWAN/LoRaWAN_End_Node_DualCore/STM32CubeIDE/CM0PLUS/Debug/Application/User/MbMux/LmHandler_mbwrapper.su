@@ -1,0 +1,11 @@
+LmHandler_mbwrapper.c:810:13:OnSysTimeUpdate_mbwrapper	8	static
+LmHandler_mbwrapper.c:750:13:OnClassChange_mbwrapper	16	static
+LmHandler_mbwrapper.c:554:13:OnNvmDataChange_mbwrapper	16	static
+LmHandler_mbwrapper.c:534:17:GetTemperatureLevel_mbwrapper	8	static
+LmHandler_mbwrapper.c:509:16:GetBatteryLevel_mbwrapper	8	static
+LmHandler_mbwrapper.c:774:13:OnBeaconStatusChange_mbwrapper	16	static
+LmHandler_mbwrapper.c:689:13:OnRxData_mbwrapper	24	static
+LmHandler_mbwrapper.c:651:13:OnTxData_mbwrapper	16	static
+LmHandler_mbwrapper.c:615:13:OnJoinRequest_mbwrapper	16	static
+LmHandler_mbwrapper.c:579:13:OnNetworkParametersChange_mbwrapper	16	static
+LmHandler_mbwrapper.c:139:6:Process_Lora_Cmd	16	static

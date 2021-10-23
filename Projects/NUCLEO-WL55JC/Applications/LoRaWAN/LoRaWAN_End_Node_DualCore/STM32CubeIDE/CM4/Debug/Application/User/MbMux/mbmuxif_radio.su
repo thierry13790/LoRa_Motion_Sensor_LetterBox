@@ -1,0 +1,7 @@
+mbmuxif_radio.c:216:13:MBMUXIF_TaskRadioNotifRcv	8	static
+mbmuxif_radio.c:204:13:MBMUXIF_IsrRadioNotifRcvCb	8	static
+mbmuxif_radio.c:193:13:MBMUXIF_IsrRadioRespRcvCb	8	static
+mbmuxif_radio.c:97:8:MBMUXIF_RadioInit	16	static
+mbmuxif_radio.c:140:19:MBMUXIF_GetRadioFeatureCmdComPtr	8	static
+mbmuxif_radio.c:156:6:MBMUXIF_RadioSendCmd	8	static
+mbmuxif_radio.c:174:6:MBMUXIF_RadioSendAck	8	static

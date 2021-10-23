@@ -1,0 +1,8 @@
+stm32wlxx_it.c:72:6:NMI_Handler	0	static
+stm32wlxx_it.c:87:6:HardFault_Handler	0	static
+stm32wlxx_it.c:102:6:SVC_Handler	0	static
+stm32wlxx_it.c:115:6:PendSV_Handler	0	static
+stm32wlxx_it.c:128:6:SysTick_Handler	0	static
+stm32wlxx_it.c:148:6:RTC_LSECSS_IRQHandler	8	static
+stm32wlxx_it.c:163:6:IPCC_C2_RX_C2_TX_IRQHandler	8	static
+stm32wlxx_it.c:178:6:SUBGHZ_Radio_IRQHandler	8	static

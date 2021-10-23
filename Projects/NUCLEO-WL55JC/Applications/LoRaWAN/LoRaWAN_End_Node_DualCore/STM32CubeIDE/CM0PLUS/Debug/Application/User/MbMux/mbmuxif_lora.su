@@ -1,0 +1,7 @@
+mbmuxif_lora.c:184:13:MBMUXIF_TaskLoraCmdRcv	8	static
+mbmuxif_lora.c:172:13:MBMUXIF_IsrLoraCmdRcvCb	8	static
+mbmuxif_lora.c:161:13:MBMUXIF_IsrLoraAckRcvCb	8	static
+mbmuxif_lora.c:82:8:MBMUXIF_LoraInit	8	static
+mbmuxif_lora.c:106:19:MBMUXIF_GetLoraFeatureNotifComPtr	8	static
+mbmuxif_lora.c:122:6:MBMUXIF_LoraSendNotif	8	static
+mbmuxif_lora.c:142:6:MBMUXIF_LoraSendResp	8	static
