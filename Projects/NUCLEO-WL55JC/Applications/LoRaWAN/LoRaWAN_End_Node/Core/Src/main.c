@@ -19,7 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "i2c.h"
+//#include "i2c.h"
 #include "app_lorawan.h"
 
 extern I2C_HandleTypeDef hI2cHandler;
@@ -150,7 +150,7 @@ void Proximity_Test(void)
 
     printf("\n*** This is a new data ***\n\n");
     prox_value = VL53L0X_PROXIMITY_GetDistance();
-    APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
+    // APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
     printf("DISTANCE is = %d mm \n", prox_value);
     printf("\n*** This is a new data ***\n\n");
     printf("\n*** Tape n or N to get a new data ***\n\n");

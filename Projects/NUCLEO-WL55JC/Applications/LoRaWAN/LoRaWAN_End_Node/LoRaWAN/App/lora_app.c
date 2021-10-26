@@ -221,9 +221,9 @@ void LoRaWAN_Init(void)
 {
   /* USER CODE BEGIN LoRaWAN_Init_1 */
 
-  BSP_LED_Init(LED_BLUE);
-  BSP_LED_Init(LED_GREEN);
-  BSP_LED_Init(LED_RED);
+  ////BSP_LED_Init(LED_BLUE);
+  ////BSP_LED_Init(LED_GREEN);
+  ////BSP_LED_Init(LED_RED);
   BSP_PB_Init(BUTTON_SW2, BUTTON_MODE_EXTI);
 
   /* Get LoRa APP version*/
@@ -329,7 +329,7 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
   /* USER CODE BEGIN OnRxData_1 */
   if ((appData != NULL) || (params != NULL))
   {
-    BSP_LED_On(LED_BLUE) ;
+    //BSP_LED_On(LED_BLUE) ;
 
     UTIL_TIMER_Start(&RxLedTimer);
 
@@ -373,12 +373,12 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
           if (AppLedStateOn == RESET)
           {
             APP_LOG(TS_OFF, VLEVEL_H,   "LED OFF\r\n");
-            BSP_LED_Off(LED_RED) ;
+            //BSP_LED_Off(LED_RED) ;
           }
           else
           {
             APP_LOG(TS_OFF, VLEVEL_H, "LED ON\r\n");
-            BSP_LED_On(LED_RED) ;
+            //BSP_LED_On(LED_RED) ;
           }
         }
         break;
@@ -496,17 +496,17 @@ static void OnTxTimerEvent(void *context)
 /* USER CODE BEGIN PrFD_LedEvents */
 static void OnTxTimerLedEvent(void *context)
 {
-  BSP_LED_Off(LED_GREEN) ;
+  //BSP_LED_Off(LED_GREEN) ;
 }
 
 static void OnRxTimerLedEvent(void *context)
 {
-  BSP_LED_Off(LED_BLUE) ;
+  //BSP_LED_Off(LED_BLUE) ;
 }
 
 static void OnJoinTimerLedEvent(void *context)
 {
-  BSP_LED_Toggle(LED_RED) ;
+  //BSP_LED_Toggle(LED_RED) ;
 }
 
 /* USER CODE END PrFD_LedEvents */
@@ -519,7 +519,7 @@ static void OnTxData(LmHandlerTxParams_t *params)
     /* Process Tx event only if its a mcps response to prevent some internal events (mlme) */
     if (params->IsMcpsConfirm != 0)
     {
-      BSP_LED_On(LED_GREEN) ;
+      //BSP_LED_On(LED_GREEN) ;
       UTIL_TIMER_Start(&TxLedTimer);
 
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### ========== MCPS-Confirm =============\r\n");
@@ -548,7 +548,7 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
     if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
     {
       UTIL_TIMER_Stop(&JoinLedTimer);
-      BSP_LED_Off(LED_RED) ;
+      //BSP_LED_Off(LED_RED) ;
 
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOINED = ");
       if (joinParams->Mode == ACTIVATION_TYPE_ABP)

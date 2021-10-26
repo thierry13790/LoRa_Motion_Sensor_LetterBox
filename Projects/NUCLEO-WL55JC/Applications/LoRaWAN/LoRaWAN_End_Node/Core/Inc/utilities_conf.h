@@ -46,7 +46,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 
-#define VLEVEL_OFF    0  /*!< used to set UTIL_ADV_TRACE_SetVerboseLevel() (not as message param) */
+#define VLEVEL_OFF    1  /*!< used to set UTIL_ADV_TRACE_SetVerboseLevel() (not as message param) */
 #define VLEVEL_ALWAYS 0  /*!< used as message params, if this level is given
                               trace will be printed even when UTIL_ADV_TRACE_SetVerboseLevel(OFF) */
 #define VLEVEL_L 1       /*!< just essential traces */

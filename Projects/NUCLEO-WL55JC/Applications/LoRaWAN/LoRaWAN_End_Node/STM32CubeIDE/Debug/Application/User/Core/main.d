@@ -55,7 +55,6 @@ Application/User/Core/main.o: \
  ../../../../../../../Drivers/CMSIS/Include/cmsis_compiler.h \
  ../../../../../../../Utilities/misc/stm32_mem.h \
  ../../../../../../../Utilities/misc/stm32_tiny_vsnprintf.h \
- ../../Core/Inc/i2c.h ../../Core/Inc/main.h \
  ../../LoRaWAN/App/app_lorawan.h
 
 ../../Core/Inc/main.h:
@@ -177,9 +176,5 @@ Application/User/Core/main.o: \
 ../../../../../../../Utilities/misc/stm32_mem.h:
 
 ../../../../../../../Utilities/misc/stm32_tiny_vsnprintf.h:
-
-../../Core/Inc/i2c.h:
-
-../../Core/Inc/main.h:
 
 ../../LoRaWAN/App/app_lorawan.h:
