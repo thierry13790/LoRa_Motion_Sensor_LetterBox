@@ -127,12 +127,8 @@ extern "C" {
   */
 void LoRaWAN_Init(void);
 
-
-
-// void Proximity_Test(void);
-
 extern void     SENSOR_IO_Init(void);
-
+extern void     SENSOR_IO_DeInit(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

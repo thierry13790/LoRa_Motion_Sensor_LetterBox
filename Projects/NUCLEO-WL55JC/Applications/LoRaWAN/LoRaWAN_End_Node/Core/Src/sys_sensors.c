@@ -202,6 +202,9 @@ int32_t  EnvSensors_Read(sensor_t *sensor_data)
 int32_t  EnvSensors_Init(void)
 {
   /* USER CODE BEGIN EnvSensors_Init */
+
+	SENSOR_IO_Init();
+
 #if defined (SENSOR_ENABLED) && (SENSOR_ENABLED == 1)
   /* Init */
 #if (USE_IKS01A2_ENV_SENSOR_HTS221_0 == 1)

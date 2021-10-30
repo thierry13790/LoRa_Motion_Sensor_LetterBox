@@ -55,6 +55,8 @@ VL53L0X_Dev_t Dev =
   .I2cDevAddr = PROXIMITY_I2C_ADDRESS
 };
 
+uint16_t Proximity_Test(void);
+
 static void VL53L0X_PROXIMITY_MspInit(void);
 static void VL53L0X_PROXIMITY_DeMspInit(void);
 static uint16_t VL53L0X_PROXIMITY_GetDistance(void);
@@ -243,6 +245,8 @@ void LoRaWAN_Init(void)
   BSP_LED_Init(LED_RED);
 
 
+
+
   // VL53L0X_PROXIMITY_Init();
 
   BSP_PB_Init(BUTTON_SW2, BUTTON_MODE_EXTI);
@@ -278,6 +282,10 @@ void LoRaWAN_Init(void)
   /* USER CODE END LoRaWAN_Init_1 */
 
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LmHandlerProcess), UTIL_SEQ_RFU, LmHandlerProcess);
+
+
+  // Send data TX Task : SendTxData
+
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), UTIL_SEQ_RFU, SendTxData);
   /* Init Info table used by LmHandler*/
   LoraInfo_Init();
@@ -436,8 +444,11 @@ static void SendTxData(void)
   EnvSensors_Read(&sensor_data);
   temperature = (SYS_GetTemperatureLevel() >> 8);
   pressure    = (uint16_t)(sensor_data.pressure * 100 / 10);      /* in hPa / 10 */
+  // uint16_t Proximity_Test(void)
 
-  Proximity_Test();
+  uint16_t length = 0;
+
+  length= Proximity_Test();
 
   AppData.Port = LORAWAN_USER_APP_PORT;
 
@@ -493,13 +504,20 @@ static void SendTxData(void)
   AppData.BufferSize = i;
 #endif /* CAYENNE_LPP */
 
-  if (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false))
+  APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
+
+  if (length < 100)
   {
-    APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-  }
-  else if (nextTxIn > 0)
-  {
-    APP_LOG(TS_ON, VLEVEL_L, "Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+
+	  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+	  {
+		APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
+	  }
+	  else if (nextTxIn > 0)
+	  {
+		APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+	  }
   }
 
   /* USER CODE END SendTxData_1 */
@@ -609,7 +627,7 @@ static void OnMacProcessNotify(void)
 /**
   * @brief  Test of VL53L0X proximity sensor.
   */
-void Proximity_Test(void)
+uint16_t Proximity_Test(void)
 {
   uint16_t prox_value = 0;
 
@@ -621,16 +639,21 @@ void Proximity_Test(void)
   printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
 
     printf("\n*** This is a new data ***\n\n");
+
     prox_value = VL53L0X_PROXIMITY_GetDistance();
+
+
     APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
     printf("DISTANCE is = %d mm \n", prox_value);
     printf("\n*** This is a new data ***\n\n");
     printf("\n*** Tape n or N to get a new data ***\n\n");
     printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
 
+
+
   VL53L0X_PROXIMITY_DeInit();
 
-
+  return(prox_value);
 
 }
 /**
@@ -642,10 +665,9 @@ static void VL53L0X_PROXIMITY_Init(void)
   VL53L0X_DeviceInfo_t VL53L0X_DeviceInfo;
 
   /* Initialize IO interface */
- SENSOR_IO_Init();
+  SENSOR_IO_Init();
 
-  // SENSOR_IO_DeInit();
- VL53L0X_PROXIMITY_MspInit();
+  VL53L0X_PROXIMITY_MspInit();
 
   memset(&VL53L0X_DeviceInfo, 0, sizeof(VL53L0X_DeviceInfo_t));
 
@@ -723,7 +745,7 @@ static void VL53L0X_PROXIMITY_MspInit(void)
 
 	  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_SET);
 
-	  HAL_Delay(1000);
+	  HAL_Delay(50);
 }
 
 /**
