@@ -36,8 +36,8 @@ static HAL_StatusTypeDef I2Cx_IsDeviceReady(I2C_HandleTypeDef *i2c_handler, uint
 static void              I2Cx_Error(I2C_HandleTypeDef *i2c_handler, uint8_t Addr);
 
 /* Sensors IO functions */
-void     SENSOR_IO_Init(void);
-void     SENSOR_IO_DeInit(void);
+/*void     SENSOR_IO_Init(void);
+void     SENSOR_IO_DeInit(void);*/
 void     SENSOR_IO_Write(uint8_t Addr, uint8_t Reg, uint8_t Value);
 uint8_t  SENSOR_IO_Read(uint8_t Addr, uint8_t Reg);
 uint16_t SENSOR_IO_ReadMultiple(uint8_t Addr, uint8_t Reg, uint8_t *Buffer, uint16_t Length);

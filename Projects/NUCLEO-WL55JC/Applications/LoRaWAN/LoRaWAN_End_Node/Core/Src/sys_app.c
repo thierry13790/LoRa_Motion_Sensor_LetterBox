@@ -34,6 +34,8 @@
 
 /* USER CODE BEGIN Includes */
 
+#include "stm32wlxx_hal.h"
+
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
@@ -79,6 +81,10 @@ static void TimestampNow(uint8_t *buff, uint16_t *size);
   * @brief  it calls UTIL_ADV_TRACE_VSNPRINTF
   */
 static void tiny_snprintf_like(char *buf, uint32_t maxsize, const char *strFormat, ...);
+
+// static void SystemClock_Config(void);
+
+
 
 /* USER CODE BEGIN PFP */
 
@@ -141,6 +147,7 @@ void UTIL_SEQ_Idle(void)
   /* USER CODE BEGIN UTIL_SEQ_Idle_1 */
 
   /* USER CODE END UTIL_SEQ_Idle_1 */
+
   UTIL_LPM_EnterLowPower();
   /* USER CODE BEGIN UTIL_SEQ_Idle_2 */
 
@@ -175,6 +182,8 @@ uint8_t GetBatteryLevel(void)
   APP_LOG(TS_ON, VLEVEL_M, "VDDA= %d\r\n", batteryLevel);
 
   /* USER CODE BEGIN GetBatteryLevel_2 */
+
+
 
   /* USER CODE END GetBatteryLevel_2 */
 
@@ -358,6 +367,7 @@ void HAL_Delay(__IO uint32_t Delay)
 
   /* USER CODE END HAL_Delay_2 */
 }
+
 
 /* USER CODE BEGIN Overload_HAL_weaks */
 

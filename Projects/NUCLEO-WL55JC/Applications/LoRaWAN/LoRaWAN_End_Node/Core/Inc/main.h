@@ -30,24 +30,12 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32wlxx_hal.h"
 
-#include "vl53l0x_def.h"
-#include "vl53l0x_api.h"
-#include "vl53l0x_tof.h"
 #include "sys_app.h"
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-void Proximity_Test(void);
-//uint32_t Serial_Scanf(uint32_t value);
-//void Error_Handler(void);
-
-extern void     SENSOR_IO_Init(void);
-//
-
-
-
 
 
 /* Private includes ----------------------------------------------------------*/
@@ -78,13 +66,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-/* VL053X */
-#define PROXIMITY_I2C_ADDRESS         ((uint16_t)0x0052)
-#define VL53L0X_ID                    ((uint16_t)0xEEAA)
-#define VL53L0X_XSHUT_Pin GPIO_PIN_5
-#define VL53L0X_XSHUT_GPIO_Port GPIOA
-#define GPIO1_Pin GPIO_PIN_6
-#define GPIO1_GPIO_Port GPIOA
+
 
 /* NUCLEO */
 
@@ -123,8 +105,7 @@ void Error_Handler(void);
 #define USARTx_TX_GPIO_Port GPIOA
 #define PROB4_Pin GPIO_PIN_10
 #define PROB4_GPIO_Port GPIOB
-/*#define XSHUT_Pin GPIO_PIN_5
-#define XSHUT_GPIO_Port GPIOA*/
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

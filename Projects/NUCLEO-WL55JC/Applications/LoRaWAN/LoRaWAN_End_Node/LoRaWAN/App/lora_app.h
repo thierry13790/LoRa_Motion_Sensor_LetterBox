@@ -29,7 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdint.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -104,6 +104,14 @@ extern "C" {
  */
 #define LORAWAN_DEFAULT_PING_SLOT_PERIODICITY       4
 
+/* VL053X */
+#define PROXIMITY_I2C_ADDRESS         ((uint16_t)0x0052)
+#define VL53L0X_ID                    ((uint16_t)0xEEAA)
+#define VL53L0X_XSHUT_Pin GPIO_PIN_5
+#define VL53L0X_XSHUT_GPIO_Port GPIOA
+#define GPIO1_Pin GPIO_PIN_6
+#define GPIO1_GPIO_Port GPIOA
+
 /* USER CODE BEGIN EC */
 
 /* USER CODE END EC */
@@ -118,6 +126,12 @@ extern "C" {
   * @brief  Init Lora Application
   */
 void LoRaWAN_Init(void);
+
+
+
+// void Proximity_Test(void);
+
+extern void     SENSOR_IO_Init(void);
 
 /* USER CODE BEGIN EFP */
 

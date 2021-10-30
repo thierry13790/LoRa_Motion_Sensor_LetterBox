@@ -37,6 +37,9 @@
 #include "sys_conf.h"
 #include "CayenneLpp.h"
 #include "sys_sensors.h"
+#include "vl53l0x_def.h"
+#include "vl53l0x_api.h"
+#include "vl53l0x_tof.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -44,6 +47,20 @@
 
 /* External variables ---------------------------------------------------------*/
 /* USER CODE BEGIN EV */
+
+extern I2C_HandleTypeDef hI2cHandler;
+VL53L0X_Dev_t Dev =
+{
+  .I2cHandle = &hI2cHandler,
+  .I2cDevAddr = PROXIMITY_I2C_ADDRESS
+};
+
+static void VL53L0X_PROXIMITY_MspInit(void);
+static void VL53L0X_PROXIMITY_DeMspInit(void);
+static uint16_t VL53L0X_PROXIMITY_GetDistance(void);
+static void VL53L0X_PROXIMITY_Init(void);
+static void VL53L0X_PROXIMITY_DeInit(void);
+
 
 /* USER CODE END EV */
 
@@ -221,9 +238,13 @@ void LoRaWAN_Init(void)
 {
   /* USER CODE BEGIN LoRaWAN_Init_1 */
 
-  ////BSP_LED_Init(LED_BLUE);
-  ////BSP_LED_Init(LED_GREEN);
-  ////BSP_LED_Init(LED_RED);
+  //BSP_LED_Init(LED_BLUE);
+  //BSP_LED_Init(LED_GREEN);
+  BSP_LED_Init(LED_RED);
+
+
+  // VL53L0X_PROXIMITY_Init();
+
   BSP_PB_Init(BUTTON_SW2, BUTTON_MODE_EXTI);
 
   /* Get LoRa APP version*/
@@ -250,6 +271,9 @@ void LoRaWAN_Init(void)
   UTIL_TIMER_SetPeriod(&TxLedTimer, 500);
   UTIL_TIMER_SetPeriod(&RxLedTimer, 500);
   UTIL_TIMER_SetPeriod(&JoinLedTimer, 500);
+
+  // VL53L0X_PROXIMITY_Init();
+
 
   /* USER CODE END LoRaWAN_Init_1 */
 
@@ -373,12 +397,12 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
           if (AppLedStateOn == RESET)
           {
             APP_LOG(TS_OFF, VLEVEL_H,   "LED OFF\r\n");
-            //BSP_LED_Off(LED_RED) ;
+            BSP_LED_Off(LED_RED) ;
           }
           else
           {
             APP_LOG(TS_OFF, VLEVEL_H, "LED ON\r\n");
-            //BSP_LED_On(LED_RED) ;
+            BSP_LED_On(LED_RED) ;
           }
         }
         break;
@@ -412,6 +436,8 @@ static void SendTxData(void)
   EnvSensors_Read(&sensor_data);
   temperature = (SYS_GetTemperatureLevel() >> 8);
   pressure    = (uint16_t)(sensor_data.pressure * 100 / 10);      /* in hPa / 10 */
+
+  Proximity_Test();
 
   AppData.Port = LORAWAN_USER_APP_PORT;
 
@@ -506,7 +532,7 @@ static void OnRxTimerLedEvent(void *context)
 
 static void OnJoinTimerLedEvent(void *context)
 {
-  //BSP_LED_Toggle(LED_RED) ;
+  BSP_LED_Toggle(LED_RED) ;
 }
 
 /* USER CODE END PrFD_LedEvents */
@@ -548,7 +574,7 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
     if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
     {
       UTIL_TIMER_Stop(&JoinLedTimer);
-      //BSP_LED_Off(LED_RED) ;
+      BSP_LED_Off(LED_RED) ;
 
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOINED = ");
       if (joinParams->Mode == ACTIVATION_TYPE_ABP)
@@ -579,5 +605,144 @@ static void OnMacProcessNotify(void)
 
   /* USER CODE END OnMacProcessNotify_2 */
 }
+
+/**
+  * @brief  Test of VL53L0X proximity sensor.
+  */
+void Proximity_Test(void)
+{
+  uint16_t prox_value = 0;
+
+  printf("\n*************************************************************\n");
+  printf("\n********************** Proximity Test ************************\n");
+  printf("\n*************************************************************\n\n");
+  VL53L0X_PROXIMITY_Init();
+  printf("\n*** Tape n or N to get a first Proximity distance ***\n\n");
+  printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
+
+    printf("\n*** This is a new data ***\n\n");
+    prox_value = VL53L0X_PROXIMITY_GetDistance();
+    APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
+    printf("DISTANCE is = %d mm \n", prox_value);
+    printf("\n*** This is a new data ***\n\n");
+    printf("\n*** Tape n or N to get a new data ***\n\n");
+    printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
+
+  VL53L0X_PROXIMITY_DeInit();
+
+
+
+}
+/**
+  * @brief  VL53L0X proximity sensor Initialization.
+  */
+static void VL53L0X_PROXIMITY_Init(void)
+{
+  uint16_t vl53l0x_id = 0;
+  VL53L0X_DeviceInfo_t VL53L0X_DeviceInfo;
+
+  /* Initialize IO interface */
+ SENSOR_IO_Init();
+
+  // SENSOR_IO_DeInit();
+ VL53L0X_PROXIMITY_MspInit();
+
+  memset(&VL53L0X_DeviceInfo, 0, sizeof(VL53L0X_DeviceInfo_t));
+
+  if (VL53L0X_ERROR_NONE == VL53L0X_GetDeviceInfo(&Dev, &VL53L0X_DeviceInfo))
+  {
+    if (VL53L0X_ERROR_NONE == VL53L0X_RdWord(&Dev, VL53L0X_REG_IDENTIFICATION_MODEL_ID, (uint16_t *) &vl53l0x_id))
+    {
+      if (vl53l0x_id == VL53L0X_ID)
+      {
+        if (VL53L0X_ERROR_NONE == VL53L0X_DataInit(&Dev))
+        {
+          Dev.Present = 1;
+          SetupSingleShot(Dev);
+        }
+        else
+        {
+          printf("VL53L0X Time of Flight Failed to send its ID!\n");
+        }
+      }
+    }
+    else
+    {
+      printf("VL53L0X Time of Flight Failed to Initialize!\n");
+    }
+  }
+  else
+  {
+    printf("VL53L0X Time of Flight Failed to get infos!\n");
+  }
+}
+
+/**
+  * @brief  VL53L0X proximity sensor Initialization.
+  */
+
+
+static void VL53L0X_PROXIMITY_DeInit(void)
+{
+
+  /* DeInitialize IO interface */
+  SENSOR_IO_DeInit();
+  VL53L0X_PROXIMITY_DeMspInit();
+
+}
+
+
+
+
+/**
+  * @brief  Get distance from VL53L0X proximity sensor.
+  * @retval Distance in mm
+  */
+static uint16_t VL53L0X_PROXIMITY_GetDistance(void)
+{
+  VL53L0X_RangingMeasurementData_t RangingMeasurementData;
+
+  VL53L0X_PerformSingleRangingMeasurement(&Dev, &RangingMeasurementData);
+
+  return RangingMeasurementData.RangeMilliMeter;
+}
+
+/**
+  * @brief  VL53L0X proximity sensor Msp Initialization.
+  */
+static void VL53L0X_PROXIMITY_MspInit(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	  /*Configure GPIO pin : VL53L0X_XSHUT_Pin */
+	  GPIO_InitStruct.Pin = VL53L0X_XSHUT_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_PULLUP;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+	  HAL_GPIO_Init(VL53L0X_XSHUT_GPIO_Port, &GPIO_InitStruct);
+
+	  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_SET);
+
+	  HAL_Delay(1000);
+}
+
+/**
+  * @brief  VL53L0X proximity sensor Msp Initialization.
+  */
+static void VL53L0X_PROXIMITY_DeMspInit(void)
+{
+	  /*GPIO_InitTypeDef GPIO_InitStruct;
+
+	  GPIO_InitStruct.Pin = VL53L0X_XSHUT_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_PULLUP;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+	  HAL_GPIO_Init(VL53L0X_XSHUT_GPIO_Port, &GPIO_InitStruct);*/
+
+	  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_RESET);
+
+	  // HAL_Delay(1000);
+}
+
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

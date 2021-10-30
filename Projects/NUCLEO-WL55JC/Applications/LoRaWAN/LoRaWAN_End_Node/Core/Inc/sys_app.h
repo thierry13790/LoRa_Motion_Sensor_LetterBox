@@ -69,6 +69,8 @@ extern "C" {
 #error "APP_LOG_ENABLED not defined or out of range <0,1>"
 #endif /* APP_LOG_ENABLED */
 
+
+
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
@@ -102,6 +104,8 @@ void GetUniqueId(uint8_t *id);
   * @retval devAddr Device Address
   */
 uint32_t GetDevAddr(void);
+
+
 
 /* USER CODE BEGIN EFP */
 
