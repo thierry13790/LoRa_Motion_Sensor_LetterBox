@@ -241,7 +241,7 @@ void LoRaWAN_Init(void)
   /* USER CODE BEGIN LoRaWAN_Init_1 */
 
   //BSP_LED_Init(LED_BLUE);
-  //BSP_LED_Init(LED_GREEN);
+  BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_RED);
 
 
@@ -276,8 +276,7 @@ void LoRaWAN_Init(void)
   UTIL_TIMER_SetPeriod(&RxLedTimer, 500);
   UTIL_TIMER_SetPeriod(&JoinLedTimer, 500);
 
-  // VL53L0X_PROXIMITY_Init();
-
+  GetBatteryLevel();
 
   /* USER CODE END LoRaWAN_Init_1 */
 
@@ -426,89 +425,33 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 static void SendTxData(void)
 {
   /* USER CODE BEGIN SendTxData_1 */
-  uint16_t pressure = 0;
-  int16_t temperature = 0;
-  sensor_t sensor_data;
-  UTIL_TIMER_Time_t nextTxIn = 0;
-
-#ifdef CAYENNE_LPP
-  uint8_t channel = 0;
-#else
-  uint16_t humidity = 0;
-  uint32_t i = 0;
-  int32_t latitude = 0;
-  int32_t longitude = 0;
-  uint16_t altitudeGps = 0;
-#endif /* CAYENNE_LPP */
-
-  EnvSensors_Read(&sensor_data);
-  temperature = (SYS_GetTemperatureLevel() >> 8);
-  pressure    = (uint16_t)(sensor_data.pressure * 100 / 10);      /* in hPa / 10 */
-  // uint16_t Proximity_Test(void)
 
   uint16_t length = 0;
+  UTIL_TIMER_Time_t nextTxIn = 0;
+
+  uint32_t i = 0;
 
   length= Proximity_Test();
-
   AppData.Port = LORAWAN_USER_APP_PORT;
+  AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
+  APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
 
-#ifdef CAYENNE_LPP
-  CayenneLppReset();
-  CayenneLppAddBarometricPressure(channel++, pressure);
-  CayenneLppAddTemperature(channel++, temperature);
-  CayenneLppAddRelativeHumidity(channel++, (uint16_t)(sensor_data.humidity));
-
-  if ((LmHandlerParams.ActiveRegion != LORAMAC_REGION_US915) && (LmHandlerParams.ActiveRegion != LORAMAC_REGION_AU915)
-      && (LmHandlerParams.ActiveRegion != LORAMAC_REGION_AS923))
-  {
-    CayenneLppAddDigitalInput(channel++, GetBatteryLevel());
-    CayenneLppAddDigitalOutput(channel++, AppLedStateOn);
-  }
-
-  CayenneLppCopy(AppData.Buffer);
-  AppData.BufferSize = CayenneLppGetSize();
-#else  /* not CAYENNE_LPP */
-  humidity    = (uint16_t)(sensor_data.humidity * 10);            /* in %*10     */
-
-  AppData.Buffer[i++] = AppLedStateOn;
-  AppData.Buffer[i++] = (uint8_t)((pressure >> 8) & 0xFF);
-  AppData.Buffer[i++] = (uint8_t)(pressure & 0xFF);
-  AppData.Buffer[i++] = (uint8_t)(temperature & 0xFF);
-  AppData.Buffer[i++] = (uint8_t)((humidity >> 8) & 0xFF);
-  AppData.Buffer[i++] = (uint8_t)(humidity & 0xFF);
-
-  if ((LmHandlerParams.ActiveRegion == LORAMAC_REGION_US915) || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AU915)
-      || (LmHandlerParams.ActiveRegion == LORAMAC_REGION_AS923))
-  {
-    AppData.Buffer[i++] = 0;
-    AppData.Buffer[i++] = 0;
-    AppData.Buffer[i++] = 0;
-    AppData.Buffer[i++] = 0;
-  }
+  if (length < 100)
+	  AppData.Buffer[i++]=1; // Touch
   else
-  {
-    latitude = sensor_data.latitude;
-    longitude = sensor_data.longitude;
-
-    AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
-    AppData.Buffer[i++] = (uint8_t)((latitude >> 16) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((latitude >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(latitude & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((longitude >> 16) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((longitude >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(longitude & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)((altitudeGps >> 8) & 0xFF);
-    AppData.Buffer[i++] = (uint8_t)(altitudeGps & 0xFF);
-  }
+	  AppData.Buffer[i++]=0;
 
   AppData.BufferSize = i;
-#endif /* CAYENNE_LPP */
 
   APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
 
   if (length < 100)
   {
-	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+	  BSP_LED_On(LED_GREEN) ;
+
+	  UTIL_TIMER_Start(&TxLedTimer);
+
+	  APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
 
 	  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
 	  {
@@ -518,6 +461,8 @@ static void SendTxData(void)
 	  {
 		APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
 	  }
+
+	  BSP_LED_Off(LED_GREEN) ;
   }
 
   /* USER CODE END SendTxData_1 */
@@ -540,7 +485,7 @@ static void OnTxTimerEvent(void *context)
 /* USER CODE BEGIN PrFD_LedEvents */
 static void OnTxTimerLedEvent(void *context)
 {
-  //BSP_LED_Off(LED_GREEN) ;
+  BSP_LED_Off(LED_GREEN) ;
 }
 
 static void OnRxTimerLedEvent(void *context)
@@ -564,7 +509,7 @@ static void OnTxData(LmHandlerTxParams_t *params)
     if (params->IsMcpsConfirm != 0)
     {
       //BSP_LED_On(LED_GREEN) ;
-      UTIL_TIMER_Start(&TxLedTimer);
+      // UTIL_TIMER_Start(&TxLedTimer);
 
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### ========== MCPS-Confirm =============\r\n");
       APP_LOG(TS_OFF, VLEVEL_H, "###### U/L FRAME:%04d | PORT:%d | DR:%d | PWR:%d", params->UplinkCounter,
@@ -631,25 +576,12 @@ uint16_t Proximity_Test(void)
 {
   uint16_t prox_value = 0;
 
-  printf("\n*************************************************************\n");
-  printf("\n********************** Proximity Test ************************\n");
-  printf("\n*************************************************************\n\n");
   VL53L0X_PROXIMITY_Init();
-  printf("\n*** Tape n or N to get a first Proximity distance ***\n\n");
-  printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
 
-    printf("\n*** This is a new data ***\n\n");
-
-    prox_value = VL53L0X_PROXIMITY_GetDistance();
+   prox_value = VL53L0X_PROXIMITY_GetDistance();
 
 
-    APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
-    printf("DISTANCE is = %d mm \n", prox_value);
-    printf("\n*** This is a new data ***\n\n");
-    printf("\n*** Tape n or N to get a new data ***\n\n");
-    printf("\n*** Tape q or Q to quit Proximity Test ***\n\n");
-
-
+//PP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
 
   VL53L0X_PROXIMITY_DeInit();
 
@@ -684,18 +616,19 @@ static void VL53L0X_PROXIMITY_Init(void)
         }
         else
         {
-          printf("VL53L0X Time of Flight Failed to send its ID!\n");
+          APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to send its ID!\r\n");
         }
       }
     }
     else
     {
-      printf("VL53L0X Time of Flight Failed to Initialize!\n");
+      APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to Initialize!\r\n");
     }
   }
   else
   {
-    printf("VL53L0X Time of Flight Failed to get infos!\n");
+
+	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to get infos!\r\n");
   }
 }
 

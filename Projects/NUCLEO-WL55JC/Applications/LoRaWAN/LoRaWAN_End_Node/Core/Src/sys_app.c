@@ -179,13 +179,18 @@ uint8_t GetBatteryLevel(void)
     batteryLevel = (((uint32_t)(batteryLevelmV - VDD_MIN) * LORAWAN_MAX_BAT) / (VDD_BAT - VDD_MIN));
   }
 
-  APP_LOG(TS_ON, VLEVEL_M, "VDDA= %d\r\n", batteryLevel);
+  APP_LOG(TS_ON, VLEVEL_M, "VDDA mV= %d\r\n", batteryLevelmV);
+  APP_LOG(TS_ON, VLEVEL_M, "VDDA level battery= %d\r\n", batteryLevel);
 
   /* USER CODE BEGIN GetBatteryLevel_2 */
 
 
 
   /* USER CODE END GetBatteryLevel_2 */
+
+  // batteryLevel = (uint8_t) batteryLevelmV;
+
+
 
   return batteryLevel;  /* 1 (very low) to 254 (fully charged) */
 }
