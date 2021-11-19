@@ -231,6 +231,7 @@ static UTIL_TIMER_Object_t JoinLedTimer;
 
 /* USER CODE END PV */
 
+
 /* Exported functions ---------------------------------------------------------*/
 /* USER CODE BEGIN EF */
 
@@ -240,15 +241,9 @@ void LoRaWAN_Init(void)
 {
   /* USER CODE BEGIN LoRaWAN_Init_1 */
 
-  //BSP_LED_Init(LED_BLUE);
+  BSP_LED_Init(LED_BLUE);
   BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_RED);
-
-
-
-
-  // VL53L0X_PROXIMITY_Init();
-
   BSP_PB_Init(BUTTON_SW2, BUTTON_MODE_EXTI);
 
   /* Get LoRa APP version*/
@@ -276,7 +271,7 @@ void LoRaWAN_Init(void)
   UTIL_TIMER_SetPeriod(&RxLedTimer, 500);
   UTIL_TIMER_SetPeriod(&JoinLedTimer, 500);
 
-  GetBatteryLevel();
+  // GetBatteryLevel();
 
   /* USER CODE END LoRaWAN_Init_1 */
 
@@ -360,7 +355,7 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
   /* USER CODE BEGIN OnRxData_1 */
   if ((appData != NULL) || (params != NULL))
   {
-    //BSP_LED_On(LED_BLUE) ;
+    BSP_LED_On(LED_BLUE) ;
 
     UTIL_TIMER_Start(&RxLedTimer);
 
@@ -428,22 +423,37 @@ static void SendTxData(void)
 
   uint16_t length = 0;
   UTIL_TIMER_Time_t nextTxIn = 0;
-
   uint32_t i = 0;
 
-  length= Proximity_Test();
   AppData.Port = LORAWAN_USER_APP_PORT;
+  AppData.BufferSize = i;
+
+  APP_LOG(TS_ON, VLEVEL_L, "Inside Send TX datas \r\n");
+
+  length=0;
+
+  length= Proximity_Test();
+  APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
+
+  switch (length)
+  {
+    case 0:
+        // Reset pb with sensor
+    	APP_LOG(TS_ON, VLEVEL_L, "Pb with sensor detector !!! we reset \r\n");
+    	NVIC_SystemReset();
+        break;
+    case '<100':
+		AppData.Buffer[i++]=65; // Touch
+        break;
+    default:
+    	AppData.Buffer[i++]=0; // No Touch
+        break;
+  }
+
   AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
   APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
 
-  if (length < 100)
-	  AppData.Buffer[i++]=1; // Touch
-  else
-	  AppData.Buffer[i++]=0;
-
   AppData.BufferSize = i;
-
-  APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
 
   if (length < 100)
   {
@@ -464,8 +474,7 @@ static void SendTxData(void)
 
 	  BSP_LED_Off(LED_GREEN) ;
   }
-
-  /* USER CODE END SendTxData_1 */
+    /* USER CODE END SendTxData_1 */
 }
 
 static void OnTxTimerEvent(void *context)
@@ -490,7 +499,7 @@ static void OnTxTimerLedEvent(void *context)
 
 static void OnRxTimerLedEvent(void *context)
 {
-  //BSP_LED_Off(LED_BLUE) ;
+  BSP_LED_Off(LED_BLUE) ;
 }
 
 static void OnJoinTimerLedEvent(void *context)
@@ -531,13 +540,19 @@ static void OnTxData(LmHandlerTxParams_t *params)
 
 static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 {
-  /* USER CODE BEGIN OnJoinRequest_1 */
+
+	uint32_t i = 0;
+	/* USER CODE BEGIN OnJoinRequest_1 */
   if (joinParams != NULL)
   {
     if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
     {
       UTIL_TIMER_Stop(&JoinLedTimer);
       BSP_LED_Off(LED_RED) ;
+
+      //uint16_t length;
+ //
+
 
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOINED = ");
       if (joinParams->Mode == ACTIVATION_TYPE_ABP)
@@ -547,11 +562,94 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
       else
       {
         APP_LOG(TS_OFF, VLEVEL_M, "OTAA =====================\r\n");
+
+        AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
+        APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
+
+#if 0
+        length=0;
+        while(1)
+     {
+       length= Proximity_Test();
+
+       if (length<100)
+       {
+    	   BSP_LED_On(LED_GREEN) ;
+    	   HAL_Delay(1000);
+    	   BSP_LED_Off(LED_GREEN) ;
+       }
+
+       APP_LOG(TS_ON, VLEVEL_M, "\r\n!!!! DISTANCE is = %d mm\r\n",length);
+
+       // if ((length==0) || (length==5147))
+       if ((length==0))
+       {
+    	   APP_LOG(TS_ON, VLEVEL_L, "0, Pb with sensor detector !!! we should reset sensor \r\n");
+    	   /*VL53L0X_PROXIMITY_DeInit();
+    	   VL53L0X_PROXIMITY_Init();*/
+    	   NVIC_SystemReset();
+       }
+
+     }
+
+
+#if 0
+
+       switch (length)
+       {
+         /*case 0:
+             // Reset pb with sensor
+         	APP_LOG(TS_ON, VLEVEL_L, "Pb with sensor detector !!! we reset \r\n");
+         	HAL_Delay(10000);
+         	NVIC_SystemReset();
+             break;*/
+         case '<100':
+     		AppData.Buffer[i++]=65; // Touch
+
+     		//BSP_LED_On(LED_GREEN) ;
+
+		    // UTIL_TIMER_Start(&TxLedTimer);
+
+		    APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+
+		    // HAL_Delay(1000);
+
+
+		    //BSP_LED_Off(LED_GREEN) ;
+     		// APP_LOG(TS_ON, VLEVEL_L, "Touch \r\n");
+             break;
+         default:
+         	AppData.Buffer[i++]=0; // No Touch
+         	// APP_LOG(TS_ON, VLEVEL_L, "NO Touch \r\n");
+             break;
+       }
+#endif
+       //AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
+       //APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
+
+       AppData.BufferSize = i;
+
+       // APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
+
+       //if (length==1000)
+    	 //  length=0;
+
+       HAL_Delay(1000);
+
+
+
+
+
+   //   }
+ //
+#endif
+
       }
     }
     else
     {
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOIN FAILED\r\n");
+      // NVIC_SystemReset();
     }
   }
   /* USER CODE END OnJoinRequest_1 */
@@ -578,7 +676,7 @@ uint16_t Proximity_Test(void)
 
   VL53L0X_PROXIMITY_Init();
 
-   prox_value = VL53L0X_PROXIMITY_GetDistance();
+  prox_value = VL53L0X_PROXIMITY_GetDistance();
 
 
 //PP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
@@ -643,7 +741,6 @@ static void VL53L0X_PROXIMITY_DeInit(void)
   /* DeInitialize IO interface */
   SENSOR_IO_DeInit();
   VL53L0X_PROXIMITY_DeMspInit();
-
 }
 
 
@@ -671,7 +768,9 @@ static void VL53L0X_PROXIMITY_MspInit(void)
 
 	  /*Configure GPIO pin : VL53L0X_XSHUT_Pin */
 	  GPIO_InitStruct.Pin = VL53L0X_XSHUT_Pin;
-	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+
+
 	  GPIO_InitStruct.Pull = GPIO_PULLUP;
 	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	  HAL_GPIO_Init(VL53L0X_XSHUT_GPIO_Port, &GPIO_InitStruct);
@@ -686,17 +785,8 @@ static void VL53L0X_PROXIMITY_MspInit(void)
   */
 static void VL53L0X_PROXIMITY_DeMspInit(void)
 {
-	  /*GPIO_InitTypeDef GPIO_InitStruct;
-
-	  GPIO_InitStruct.Pin = VL53L0X_XSHUT_Pin;
-	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	  GPIO_InitStruct.Pull = GPIO_PULLUP;
-	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	  HAL_GPIO_Init(VL53L0X_XSHUT_GPIO_Port, &GPIO_InitStruct);*/
-
-	  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_RESET);
-
-	  // HAL_Delay(1000);
+  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_RESET);
+  HAL_Delay(100);
 }
 
 

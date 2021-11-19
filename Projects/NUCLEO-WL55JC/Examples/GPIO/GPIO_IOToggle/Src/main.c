@@ -107,7 +107,7 @@ int main(void)
   GPIO_InitStruct.Pull  = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 
-  GPIO_InitStruct.Pin = LED2_PIN;
+  GPIO_InitStruct.Pin = GPIO_PIN_5/*LED2_PIN*/;
   HAL_GPIO_Init(LED2_GPIO_PORT, &GPIO_InitStruct);
   GPIO_InitStruct.Pin = LED1_PIN;
   HAL_GPIO_Init(LED1_GPIO_PORT, &GPIO_InitStruct);
@@ -121,7 +121,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+    HAL_GPIO_TogglePin(LED2_GPIO_PORT, GPIO_PIN_5);
     /* Insert delay 100 ms */
     HAL_Delay(100);
     HAL_GPIO_TogglePin(LED1_GPIO_PORT, LED1_PIN);
