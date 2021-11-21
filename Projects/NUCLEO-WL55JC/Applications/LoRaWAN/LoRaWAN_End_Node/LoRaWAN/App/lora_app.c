@@ -40,6 +40,8 @@
 #include "vl53l0x_def.h"
 #include "vl53l0x_api.h"
 #include "vl53l0x_tof.h"
+#include "stm32wlxx_hal.h"
+#include "stm32wlxx_it.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -48,12 +50,30 @@
 /* External variables ---------------------------------------------------------*/
 /* USER CODE BEGIN EV */
 
+
+VL53L0X_RangingMeasurementData_t RangingData;
+VL53L0X_Dev_t  vl53l0x_c; // center module
+VL53L0X_DEV    Dev = &vl53l0x_c;
+
+volatile uint8_t TofDataRead;
+
 extern I2C_HandleTypeDef hI2cHandler;
-VL53L0X_Dev_t Dev =
+
+/*VL53L0X_Dev_t Dev =
 {
   .I2cHandle = &hI2cHandler,
   .I2cDevAddr = PROXIMITY_I2C_ADDRESS
-};
+};*/
+
+#define PROXIMITY_I2C_ADDRESS         ((uint16_t)0x0052)
+#define VL53L0X_ID                    ((uint16_t)0xEEAA)
+#define VL53L0X_XSHUT_Pin GPIO_PIN_5
+#define VL53L0X_XSHUT_GPIO_Port GPIOA
+
+
+#define VL53L0X_INT_Pin GPIO_PIN_6
+#define VL53L0X_INT_Port GPIOA
+#define VL53L0X_INT_EXTI_IRQn EXTI2_IRQHandler
 
 uint16_t Proximity_Test(void);
 
@@ -192,7 +212,7 @@ static LmHandlerParams_t LmHandlerParams =
   * @brief Type of Event to generate application Tx
   */
 static TxEventType_t EventType = TX_ON_TIMER;
-//static TxEventType_t EventType = TX_ON_EVENT;
+// static TxEventType_t EventType = TX_ON_EVENT;
 /**
   * @brief Timer to handle the application Tx
   */
@@ -273,6 +293,9 @@ void LoRaWAN_Init(void)
 
   // GetBatteryLevel();
 
+  //APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053X test  ");
+
+
   /* USER CODE END LoRaWAN_Init_1 */
 
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LmHandlerProcess), UTIL_SEQ_RFU, LmHandlerProcess);
@@ -332,14 +355,24 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     case  BUTTON_SW1_PIN:
       /* Note: when "EventType == TX_ON_TIMER" this GPIO is not initialized */
-      UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
+
+    	VL53L0X_GetRangingMeasurementData(Dev, &RangingData);
+    	VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+    	TofDataRead = 1;
+    	// UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_LoRaSendOnTxTimerOrButtonEvent), CFG_SEQ_Prio_0);
       break;
     case  BUTTON_SW2_PIN:
       break;
-    case  BUTTON_SW3_PIN:
+    /*case  BUTTON_SW3_PIN:
+      break;*/
+    case VL53L0X_INT_Pin:
+/*      VL53L0X_GetRangingMeasurementData(Dev, &RangingData);
+      VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+      TofDataRead = 1;*/
       break;
     default:
       break;
+
   }
 }
 
@@ -421,7 +454,7 @@ static void SendTxData(void)
 {
   /* USER CODE BEGIN SendTxData_1 */
 
-  uint16_t length = 0;
+  uint16_t length = 65535;
   UTIL_TIMER_Time_t nextTxIn = 0;
   uint32_t i = 0;
 
@@ -430,24 +463,25 @@ static void SendTxData(void)
 
   APP_LOG(TS_ON, VLEVEL_L, "Inside Send TX datas \r\n");
 
-  length=0;
-
-  length= Proximity_Test();
-  APP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",length);
-
-  switch (length)
+  if(TofDataRead == 1)
   {
-    case 0:
-        // Reset pb with sensor
-    	APP_LOG(TS_ON, VLEVEL_L, "Pb with sensor detector !!! we reset \r\n");
-    	NVIC_SystemReset();
-        break;
-    case '<100':
-		AppData.Buffer[i++]=65; // Touch
-        break;
-    default:
-    	AppData.Buffer[i++]=0; // No Touch
-        break;
+	  length=RangingData.RangeMilliMeter;
+	  TofDataRead = 0;
+      APP_LOG(TS_OFF, VLEVEL_M, "Measured distance: %i\n\r", RangingData.RangeMilliMeter);
+      switch (length)
+      {
+          case 0:
+              // Reset pb with sensor
+          	APP_LOG(TS_ON, VLEVEL_L, "Pb with sensor detector !!! we reset \r\n");
+          	NVIC_SystemReset();
+              break;
+          case '<100':
+      		AppData.Buffer[i++]=65; // Touch
+              break;
+          default:
+          	AppData.Buffer[i++]=0; // No Touch
+              break;
+      }
   }
 
   AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
@@ -543,6 +577,8 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 
 	uint32_t i = 0;
 	/* USER CODE BEGIN OnJoinRequest_1 */
+
+
   if (joinParams != NULL)
   {
     if (joinParams->Status == LORAMAC_HANDLER_SUCCESS)
@@ -565,6 +601,8 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 
         AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
         APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
+
+        VL53L0X_PROXIMITY_Init();
 
 #if 0
         length=0;
@@ -674,7 +712,7 @@ uint16_t Proximity_Test(void)
 {
   uint16_t prox_value = 0;
 
-  VL53L0X_PROXIMITY_Init();
+  // VL53L0X_PROXIMITY_Init();
 
   prox_value = VL53L0X_PROXIMITY_GetDistance();
 
@@ -691,13 +729,68 @@ uint16_t Proximity_Test(void)
   */
 static void VL53L0X_PROXIMITY_Init(void)
 {
-  uint16_t vl53l0x_id = 0;
-  VL53L0X_DeviceInfo_t VL53L0X_DeviceInfo;
+  //uint16_t vl53l0x_id = 0;
+  //VL53L0X_DeviceInfo_t VL53L0X_DeviceInfo;
+
+  //
+
+	// VL53L0X initialisation stuff
+	//
+  uint32_t refSpadCount;
+  uint8_t isApertureSpads;
+  uint8_t VhvSettings;
+  uint8_t PhaseCal;
+
+  VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
+
+  //
 
   /* Initialize IO interface */
   SENSOR_IO_Init();
 
   VL53L0X_PROXIMITY_MspInit();
+
+  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
+
+  Dev->I2cHandle = &hI2cHandler;
+  Dev->I2cDevAddr = 0x52;
+
+  error=VL53L0X_WaitDeviceBooted( Dev );
+  error=VL53L0X_DataInit( Dev );
+  error=VL53L0X_StaticInit( Dev );
+  error=VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
+  error=VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
+
+  VL53L0X_SetInterMeasurementPeriodMilliSeconds(Dev,10000);
+
+  // uint32_t duration;
+
+  //VL53L0X_GetInterMeasurementPeriodMilliSeconds(Dev,&duration);
+
+  // APP_LOG(TS_OFF, VLEVEL_M, "Duration: %i\n\r", duration);
+
+  error=VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_TIMED_RANGING);
+
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  error=VL53L0X_StartMeasurement(Dev);
+
+
+ /* while (1)
+  {
+
+	if(TofDataRead == 1)
+  	{
+  	 	TofDataRead = 0;
+  	 	if (RangingData.RangeMilliMeter < 100)
+  	 	 APP_LOG(TS_OFF, VLEVEL_M, "Measured distance: %i\n\r", RangingData.RangeMilliMeter);
+  	}
+
+  }
+
+  */
+#if 0
+
 
   memset(&VL53L0X_DeviceInfo, 0, sizeof(VL53L0X_DeviceInfo_t));
 
@@ -728,6 +821,9 @@ static void VL53L0X_PROXIMITY_Init(void)
 
 	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to get infos!\r\n");
   }
+
+#endif
+
 }
 
 /**
@@ -768,9 +864,7 @@ static void VL53L0X_PROXIMITY_MspInit(void)
 
 	  /*Configure GPIO pin : VL53L0X_XSHUT_Pin */
 	  GPIO_InitStruct.Pin = VL53L0X_XSHUT_Pin;
-	  	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-
-
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	  GPIO_InitStruct.Pull = GPIO_PULLUP;
 	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	  HAL_GPIO_Init(VL53L0X_XSHUT_GPIO_Port, &GPIO_InitStruct);
@@ -778,6 +872,23 @@ static void VL53L0X_PROXIMITY_MspInit(void)
 	  HAL_GPIO_WritePin(VL53L0X_XSHUT_GPIO_Port, VL53L0X_XSHUT_Pin, GPIO_PIN_SET);
 
 	  HAL_Delay(50);
+
+	  /*Configure GPIO pin : PtPin */
+
+	  /*__HAL_RCC_GPIOA_CLK_ENABLE();
+
+	  GPIO_InitStruct.Pin = VL53L0X_INT_Pin;
+	  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+	  GPIO_InitStruct.Pull = GPIO_PULLUP;
+	  HAL_GPIO_Init(VL53L0X_INT_Port, &GPIO_InitStruct);
+
+	  HAL_NVIC_SetPriority(EXTI2_IRQn, 2, 0);
+	  HAL_NVIC_EnableIRQ(EXTI2_IRQn);*/
+
+	  BSP_PB_Init(BUTTON_SW1, BUTTON_MODE_EXTI);
+
+
+
 }
 
 /**

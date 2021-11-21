@@ -107,12 +107,7 @@ extern "C" {
 #define LORAWAN_DEFAULT_PING_SLOT_PERIODICITY       4
 
 /* VL053X */
-#define PROXIMITY_I2C_ADDRESS         ((uint16_t)0x0052)
-#define VL53L0X_ID                    ((uint16_t)0xEEAA)
-#define VL53L0X_XSHUT_Pin GPIO_PIN_5
-#define VL53L0X_XSHUT_GPIO_Port GPIOA
-#define GPIO1_Pin GPIO_PIN_6
-#define GPIO1_GPIO_Port GPIOA
+
 
 /* USER CODE BEGIN EC */
 

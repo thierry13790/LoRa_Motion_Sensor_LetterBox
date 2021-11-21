@@ -89,7 +89,7 @@
  * @brief value used to reset the LPM mode
  */
 //#define UTIL_LPM_NO_BIT_SET   (1UL) // OK
-#define UTIL_LPM_NO_BIT_SET   (0UL)
+ #define UTIL_LPM_NO_BIT_SET   (0UL)
 
 
 /**
