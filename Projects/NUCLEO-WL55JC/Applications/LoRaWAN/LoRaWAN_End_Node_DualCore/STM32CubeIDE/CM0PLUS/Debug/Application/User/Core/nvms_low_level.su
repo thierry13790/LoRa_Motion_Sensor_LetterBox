@@ -1,6 +1,0 @@
-nvms_low_level.c:120:17:get_page	0	static
-nvms_low_level.c:66:13:page_write	32	static
-nvms_low_level.c:141:6:NVMS_LL_Init	0	static
-nvms_low_level.c:157:6:NVMS_LL_IsBlockErased	0	static
-nvms_low_level.c:186:6:NVMS_LL_BlockErase	24	static
-nvms_low_level.c:232:6:NVMS_LL_Write	32	static

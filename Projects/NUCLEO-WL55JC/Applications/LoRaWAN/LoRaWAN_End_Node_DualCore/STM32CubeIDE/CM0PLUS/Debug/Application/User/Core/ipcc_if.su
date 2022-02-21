@@ -1,7 +1,0 @@
-ipcc_if.c:174:13:IpccIfIsrTxCb	8	static
-ipcc_if.c:189:13:IpccIfIsrRxCb	8	static
-ipcc_if.c:79:6:IPCC_IF_Init	32	static
-ipcc_if.c:110:10:IPCC_IF_CmdRespStatus	8	static
-ipcc_if.c:121:10:IPCC_IF_NotifAckStatus	8	static
-ipcc_if.c:132:9:IPCC_IF_NotificationSnd	8	static
-ipcc_if.c:150:9:IPCC_IF_ResponseSnd	8	static

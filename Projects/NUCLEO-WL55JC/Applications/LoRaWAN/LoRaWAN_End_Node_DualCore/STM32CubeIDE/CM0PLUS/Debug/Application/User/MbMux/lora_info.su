@@ -1,3 +1,0 @@
-lora_info.c:147:13:LoraInfo_GetPtr	0	static
-lora_info.c:160:6:StoreValueInFeatureListTable	16	static
-lora_info.c:75:6:LoraInfo_Init	8	static

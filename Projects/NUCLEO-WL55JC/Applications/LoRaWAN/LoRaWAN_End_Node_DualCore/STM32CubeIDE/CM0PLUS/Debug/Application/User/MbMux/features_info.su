@@ -1,2 +1,0 @@
-features_info.c:120:6:FEAT_INFO_Init	8	static
-features_info.c:133:19:FEAT_INFO_GetListPtr	0	static

@@ -1,5 +1,0 @@
-kms_low_level.c:70:7:KMS_LL_FLASH_Read	0	static
-kms_low_level.c:97:6:KMS_LL_ReportError	0	static
-kms_low_level.c:107:6:KMS_LL_ReportMemInit	0	static
-kms_low_level.c:119:6:KMS_LL_ReportMemAlloc	0	static
-kms_low_level.c:130:6:KMS_LL_ReportMemFree	0	static

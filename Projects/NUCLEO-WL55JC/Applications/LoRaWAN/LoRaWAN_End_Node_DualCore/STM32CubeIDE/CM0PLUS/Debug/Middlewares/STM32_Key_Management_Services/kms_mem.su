@@ -1,4 +1,0 @@
-kms_mem.c:210:13:mempool_init	16	static
-kms_mem.c:254:6:KMS_MemInit	16	static
-kms_mem.c:291:13:KMS_Alloc	16	static
-kms_mem.c:356:6:KMS_Free	16	static

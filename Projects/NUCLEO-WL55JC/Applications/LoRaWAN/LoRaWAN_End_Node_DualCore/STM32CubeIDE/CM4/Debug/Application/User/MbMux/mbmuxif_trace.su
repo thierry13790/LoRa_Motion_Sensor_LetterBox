@@ -1,3 +1,0 @@
-mbmuxif_trace.c:71:8:MBMUXIF_TraceInit	16	static
-mbmuxif_trace.c:96:6:MBMUXIF_TraceSendAck	8	static
-mbmuxif_trace.c:115:13:MBMUXIF_IsrTraceNotifRcvCb	8	static
