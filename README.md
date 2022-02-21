@@ -10,6 +10,6 @@ This project allow to manage a ST STM32WL55 chip able to manage a time of flight
 
   * ST VL53L0X Time of Flight Sensor monted on a AZ Delivery board : https://www.az-delivery.de/en/products/vl53l0x-time-of-flight-tof-laser-abstandssensor
 
-NB : please set your LoRa credential inside this file : se-identity_to_be_filled _with_your_credentials.h located inside 
+NB : To compile please set your LoRa credential inside this file : se-identity_to_be_filled _with_your_credentials.h located inside 
 LoRa_Motion_Sensor_LetterBox\Projects\NUCLEO-WL55JC\Applications\LoRaWAN\LoRaWAN_End_Node\LoRaWAN\App
-and rename the file : se-identity inside same directory
+and rename the file : se-identity inside same directory then you should be able to compile without errors
