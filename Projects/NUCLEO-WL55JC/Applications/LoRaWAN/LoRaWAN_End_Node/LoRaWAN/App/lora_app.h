@@ -50,8 +50,9 @@ extern "C" {
 /*!
  * Defines the application data transmission duty cycle. 10s, value in [ms].
  */
-//#define APP_TX_DUTYCYCLE                            10000
-#define APP_TX_DUTYCYCLE                            500
+#define APP_TX_DUTYCYCLE                            10*60000 // every 10mn we check
+//#define APP_TX_DUTYCYCLE                            500
+//#define APP_TX_DUTYCYCLE                            5000
 
 
 /*!

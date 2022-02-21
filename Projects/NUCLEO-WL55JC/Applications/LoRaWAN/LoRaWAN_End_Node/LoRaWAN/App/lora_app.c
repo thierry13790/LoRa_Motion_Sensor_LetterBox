@@ -511,7 +511,7 @@ static void SendTxData(void)
               break;
 
           default:
-          	  AppData.Buffer[i++]=0; // No Touch
+          	  // AppData.Buffer[i++]=0; // No Touch
               break;
       }
 
@@ -519,10 +519,11 @@ static void SendTxData(void)
       {
 
 	    AppData.Port = LORAWAN_USER_APP_PORT;
+	    AppData.Buffer[i++]=0;  // System OK
+	    AppData.Buffer[i++]=1; // Touch
+		AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 100 (fully charged) */
+		APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
 
-		AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 254 (fully charged) */
-		APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);
-		AppData.Buffer[i++]=65; // Touch
 
 		AppData.BufferSize = i;
 
@@ -543,6 +544,35 @@ static void SendTxData(void)
 		BSP_LED_Off(LED_GREEN) ;
 
       }
+      else // Touch
+      {
+    	    AppData.Port = LORAWAN_USER_APP_PORT;
+    	    AppData.Buffer[i++]=0;  // System OK
+    	    AppData.Buffer[i++]=0; // Touch
+			AppData.Buffer[i++] = GetBatteryLevel();
+			APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
+
+
+			AppData.BufferSize = i;
+
+			BSP_LED_On(LED_GREEN) ;
+
+			UTIL_TIMER_Start(&TxLedTimer);
+
+			APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+
+			if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+			{
+			  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
+			}
+			else if (nextTxIn > 0)
+			{
+				  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+			}
+			BSP_LED_Off(LED_GREEN) ;
+
+      }
+
   }
   else
   {
@@ -655,6 +685,8 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
         APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);*/
 
         UTIL_TIMER_Start(&TxTimer);
+
+        SendTxData();
 
 
       }
