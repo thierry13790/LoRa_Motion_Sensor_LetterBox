@@ -37,6 +37,8 @@
 /* USER CODE BEGIN PD */
 /* USER CODE END PD */
 
+#define PROTO_MAILBOX
+
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 

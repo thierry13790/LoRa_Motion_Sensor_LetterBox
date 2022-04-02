@@ -30,6 +30,8 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdint.h"
+
+#define PROTO_MAILBOX
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -50,16 +52,22 @@ extern "C" {
 /*!
  * Defines the application data transmission duty cycle. 10s, value in [ms].
  */
-#define APP_TX_DUTYCYCLE                            10*60000 // every 10mn we check
-//#define APP_TX_DUTYCYCLE                            500
-//#define APP_TX_DUTYCYCLE                            5000
 
+
+
+#ifdef PROTO_MAILBOX
+#define APP_TX_DUTYCYCLE                            5000
+#else
+#define APP_TX_DUTYCYCLE                            10*60000 // every 10mn we check
+#endif
 
 /*!
  * LoRaWAN User application port
  * @note do not use 224. It is reserved for certification
  */
 #define LORAWAN_USER_APP_PORT                       199 //2
+
+#define TOUCH_DISTANCE 70
 
 /*!
  * LoRaWAN Switch class application port

@@ -467,7 +467,6 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 static void SendTxData(void)
 {
   /* USER CODE BEGIN SendTxData_1 */
-
   uint16_t length = 65000;
   UTIL_TIMER_Time_t nextTxIn = 0;
   uint32_t i = 0;
@@ -488,7 +487,7 @@ static void SendTxData(void)
 
   APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
 
-  HAL_Delay(50); // We let 200ms for measure only then will timeout in case no result and we will stop measure
+  HAL_Delay(50); // We let 50 ms for measure only then will timeout in case no result and we will stop measure
 
   HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 
@@ -501,82 +500,26 @@ static void SendTxData(void)
 
       SENSOR_IO_DeInit();
 
-      switch (length)
+      AppData.Buffer[i++]=0; // No error
+
+      if (length<TOUCH_DISTANCE)
       {
-          case 0:
-              // Reset pb with sensor
-          	APP_LOG(TS_ON, VLEVEL_L, "Pb with sensor detector !!! we reset \r\n");
-          	HAL_Delay(100);
-          	NVIC_SystemReset();
-              break;
-
-          default:
-          	  // AppData.Buffer[i++]=0; // No Touch
-              break;
-      }
-
-      if (length<100)
-      {
-
-	    AppData.Port = LORAWAN_USER_APP_PORT;
-	    AppData.Buffer[i++]=0;  // System OK
 	    AppData.Buffer[i++]=1; // Touch
-		AppData.Buffer[i++] = GetBatteryLevel();        /* 1 (very low) to 100 (fully charged) */
-		APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
-
-
-		AppData.BufferSize = i;
-
-		BSP_LED_On(LED_GREEN) ;
-
-		UTIL_TIMER_Start(&TxLedTimer);
-
 		APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
-
-		if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
-		{
-		  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-		}
-		else if (nextTxIn > 0)
-		{
-			  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
-		}
-		BSP_LED_Off(LED_GREEN) ;
-
       }
-      else // Touch
+      else // No Touch
       {
-    	    AppData.Port = LORAWAN_USER_APP_PORT;
-    	    AppData.Buffer[i++]=0;  // System OK
-    	    AppData.Buffer[i++]=0; // Touch
-			AppData.Buffer[i++] = GetBatteryLevel();
-			APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
-
-
-			AppData.BufferSize = i;
-
-			BSP_LED_On(LED_GREEN) ;
-
-			UTIL_TIMER_Start(&TxLedTimer);
-
-			APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
-
-			if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
-			{
-			  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
-			}
-			else if (nextTxIn > 0)
-			{
-				  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
-			}
-			BSP_LED_Off(LED_GREEN) ;
-
-      }
-
+		AppData.Buffer[i++]=0; // Touch
+      } // End there's data and no errors
   }
-  else
+  else /* TofDataRead != 1 && VL053 error*/
   {
+	  AppData.Buffer[i++]=1; // Error
+	  AppData.Buffer[i++]=2; // no distance detected so error !!!!
+
 	  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
+
+
 	  HAL_Delay(2000);
 	  error=VL53L0X_StopMeasurement(Dev);
 
@@ -589,8 +532,32 @@ static void SendTxData(void)
 	  APP_LOG(TS_ON, VLEVEL_L, "Clear Interrupt on VL status = %d\r\n", error);
 
 	  HAL_Delay(2000);
-	  // NVIC_SystemReset();
   }
+
+  AppData.Buffer[i++] = GetBatteryLevel();       /* 1 (very low) to 100 (fully charged) */
+  APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
+
+  AppData.Port = LORAWAN_USER_APP_PORT;
+  AppData.BufferSize = i;
+
+  BSP_LED_On(LED_GREEN) ;
+
+  UTIL_TIMER_Start(&TxLedTimer);
+
+  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+  {
+	  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
+  }
+  else if (nextTxIn > 0)
+  {
+		  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+  }
+  BSP_LED_Off(LED_GREEN) ;
+
+  /*if (AppData.Buffer[1]==2) // there was problem measuring distance
+	  // HAL_Delay(1000); // Not possible else we do not allow to send data
+	  NVIC_SystemReset();*/
+
     /* USER CODE END SendTxData_1 */
 }
 
@@ -612,11 +579,15 @@ static void OnTxTimerEvent(void *context)
 static void OnTxTimerLedEvent(void *context)
 {
   BSP_LED_Off(LED_GREEN) ;
+  if (AppData.Buffer[1]==2) // there was problem measuring distance
+   	  // HAL_Delay(1000); // Not possible else we do not allow to send data
+   	  NVIC_SystemReset();
 }
 
 static void OnRxTimerLedEvent(void *context)
 {
   BSP_LED_Off(LED_BLUE) ;
+
 }
 
 static void OnJoinTimerLedEvent(void *context)
@@ -658,9 +629,9 @@ static void OnTxData(LmHandlerTxParams_t *params)
 static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 {
 
-	uint32_t i = 0;
+	//uint32_t i = 0;
 
-	VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
+	//VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
 
 	/* USER CODE BEGIN OnJoinRequest_1 */
 
@@ -680,9 +651,6 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
       else
       {
         APP_LOG(TS_OFF, VLEVEL_M, "OTAA =====================\r\n");
-
-        /*AppData.Buffer[i++] = GetBatteryLevel();        // 1 (very low) to 254 (fully charged)
-        APP_LOG(TS_OFF, VLEVEL_M, "\r\nBattery level is = %d => 1 (very low) to 254 (fully charged)\r\n",AppData.Buffer[i-1]);*/
 
         UTIL_TIMER_Start(&TxTimer);
 
