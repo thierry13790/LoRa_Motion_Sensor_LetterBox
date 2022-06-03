@@ -59,11 +59,7 @@ volatile uint8_t TofDataRead;
 
 extern I2C_HandleTypeDef hI2cHandler;
 
-/*VL53L0X_Dev_t Dev =
-{
-  .I2cHandle = &hI2cHandler,
-  .I2cDevAddr = PROXIMITY_I2C_ADDRESS
-};*/
+extern RTC_HandleTypeDef hrtc;
 
 #define PROXIMITY_I2C_ADDRESS         ((uint16_t)0x0052)
 #define VL53L0X_ID                    ((uint16_t)0xEEAA)
@@ -75,6 +71,9 @@ extern I2C_HandleTypeDef hI2cHandler;
 #define VL53L0X_INT_Port GPIOA
 #define VL53L0X_INT_EXTI_IRQn EXTI2_IRQHandler
 
+#define MAX_TS_SIZE (int) 16
+
+
 uint16_t Proximity_Test(void);
 
 static void VL53L0X_PROXIMITY_MspInit(void);
@@ -83,6 +82,16 @@ static uint16_t VL53L0X_PROXIMITY_GetDistance(void);
 static VL53L0X_Error VL53L0X_PROXIMITY_Init(void);
 static void VL53L0X_PROXIMITY_DeInit(void);
 
+
+static void TimestampNow_Calendar_Time(uint8_t *buff, uint16_t *size);
+
+/**
+  * @brief  Display the current time and date.
+  * @param  showtime : pointer to buffer
+  * @param  showdate : pointer to buffer
+  * @retval None
+  */
+static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate);
 
 /* USER CODE END EV */
 
@@ -321,6 +330,18 @@ void LoRaWAN_Init(void)
 
   LmHandlerJoin(ActivationType);
 
+  /* Buffers used for displaying Time and Date */
+    uint8_t aShowTime[16] = "hh:ms:ss";
+    uint8_t aShowDate[16] = "dd-mm-yyyy";
+
+
+  while (1){
+          RTC_CalendarShow(aShowTime, aShowDate);
+
+          APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
+
+          HAL_Delay(1000);
+    }
   error= VL53L0X_PROXIMITY_Init();
 
   if (error==VL53L0X_ERROR_NONE)
@@ -472,6 +493,10 @@ static void SendTxData(void)
   uint32_t i = 0;
   VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
 
+  /* Buffers used for displaying Time and Date */
+  uint8_t aShowTime[16] = "hh:ms:ss";
+  uint8_t aShowDate[16] = "dd-mm-yyyy";
+
   APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 adress %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
 
   SENSOR_IO_Init();
@@ -511,6 +536,33 @@ static void SendTxData(void)
       {
 		AppData.Buffer[i++]=0; // Touch
       } // End there's data and no errors
+
+      // Read System time
+
+      SysTime_t curtime = SysTimeGet();
+
+      //APP_LOG(TS_OFF, VLEVEL_M,"Seconds=%d Subseconds=%d \n\r",curtime.Seconds,curtime.SubSeconds);
+// while (1){
+      /* Display the updated Time and Date */
+      RTC_CalendarShow(aShowTime, aShowDate);
+
+      APP_LOG(TS_OFF, VLEVEL_M,"Time Subseconds=%s Date=%s \n\r",aShowTime,aShowDate);
+
+     // HAL_Delay(1000);
+// }
+      /* @param [IN]  timestamp The time since UNIX epoch to convert into calendar time.
+      * @param [OUT] localtime Pointer to the calendar time object which will contain
+      the result of the conversion.
+      */
+      // void SysTimeLocalTime( const uint32_t timestamp, struct tm *localtime );
+
+
+      struct tm *localtime;
+
+      SysTimeLocalTime(curtime.Seconds,localtime);
+
+      APP_LOG(TS_OFF, VLEVEL_M,"day=%i hour=%i seconds=%i",localtime->tm_mday,localtime->tm_hour,localtime->tm_sec);
+
   }
   else /* TofDataRead != 1 && VL053 error*/
   {
@@ -559,6 +611,19 @@ static void SendTxData(void)
 	  NVIC_SystemReset();*/
 
     /* USER CODE END SendTxData_1 */
+}
+
+static void TimestampNow_Calendar_Time(uint8_t *buff, uint16_t *size)
+{
+  /* USER CODE BEGIN TimestampNow_1 */
+
+  /* USER CODE END TimestampNow_1 */
+  SysTime_t curtime = SysTimeGet();
+  // tiny_snprintf_like((char *)buff, MAX_TS_SIZE, "%ds%03d:", curtime.Seconds, curtime.SubSeconds);
+  // *size = strlen((char *)buff);
+  /* USER CODE BEGIN TimestampNow_2 */
+
+  /* USER CODE END TimestampNow_2 */
 }
 
 static void OnTxTimerEvent(void *context)
@@ -853,6 +918,24 @@ static void VL53L0X_PROXIMITY_DeMspInit(void)
   BSP_PB_DeInit(BUTTON_SW1);
   HAL_Delay(100);
 }
+
+static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate)
+{
+  RTC_DateTypeDef sdatestructureget;
+  RTC_TimeTypeDef stimestructureget;
+
+  /* Get the RTC current Time */
+  HAL_RTC_GetTime(&hrtc, &stimestructureget, RTC_FORMAT_BIN);
+  /* Get the RTC current Date */
+  HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
+  /* Display time Format : hh:mm:ss */
+  sprintf((char *)showtime, "%2d:%2d:%2d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
+  //sprintf((char *)showtime, "%2d",stimestructureget.SubSeconds);
+
+  /* Display date Format : mm-dd-yy */
+  sprintf((char *)showdate, "%2d-%2d-%2d", sdatestructureget.Month, sdatestructureget.Date, 2000 + sdatestructureget.Year);
+}
+
 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -58,6 +58,7 @@
 
 #include "LoRaMac.h"
 #include "mw_log_conf.h"
+#include "sys_app.h"
 
 #ifndef LORAMAC_VERSION
 /*!
@@ -2152,7 +2153,8 @@ static void ProcessMacCommands( uint8_t *payload, uint8_t macIndex, uint8_t comm
             }
             case SRV_MAC_DEVICE_TIME_ANS:
             {
-                if( LoRaMacConfirmQueueIsCmdActive( MLME_DEVICE_TIME ) == true )
+            	APP_LOG(TS_ON, VLEVEL_L, "TIME !!!!!!!!!\r\n");
+            	if( LoRaMacConfirmQueueIsCmdActive( MLME_DEVICE_TIME ) == true )
                 {
                     LoRaMacConfirmQueueSetStatus( LORAMAC_EVENT_INFO_STATUS_OK, MLME_DEVICE_TIME );
                     SysTime_t gpsEpochTime = { 0 };
