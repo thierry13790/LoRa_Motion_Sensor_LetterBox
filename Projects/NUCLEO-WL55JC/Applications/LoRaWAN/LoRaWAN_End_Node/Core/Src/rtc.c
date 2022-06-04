@@ -26,7 +26,7 @@
 
 RTC_HandleTypeDef hrtc;
 
-static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate);
+// static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate);
 
 /* RTC init function */
 void MX_RTC_Init(void)
@@ -37,35 +37,14 @@ void MX_RTC_Init(void)
   /* USER CODE END RTC_Init 0 */
 
   RTC_AlarmTypeDef sAlarm = {0};
-
-  /*RTC_TimeTypeDef sTime = {0};
+  RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
-
-  /* Buffers used for displaying Time and Date */
-   // uint8_t aShowTime[16] = "hh:ms:ss";
-    //uint8_t aShowDate[16] = "dd-mm-yyyy";
 
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
   /** Initialize RTC Only
   */
-
-  /*
-   *
-   * hrtc.Instance = RTC;
-  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-  hrtc.Init.AsynchPrediv = RTC_ASYNCH_PREDIV;
-  hrtc.Init.SynchPrediv = RTC_SYNCH_PREDIV;
-  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-  hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
-  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-  hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  hrtc.Init.BinMode = RTC_BINARY_NONE;
-   *
-   */
-
 
   hrtc.Instance = RTC;
   // hrtc.Init.HourFormat = RTC_HOURFORMAT_24; // added
@@ -75,8 +54,6 @@ void MX_RTC_Init(void)
   hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  // hrtc.Init.BinMode = RTC_BINARY_MIX;
-  // hrtc.Init.BinMode = RTC_BINARY_NONE;
   hrtc.Init.BinMode = RTC_BINARY_ONLY;
 
   if (HAL_RTC_Init(&hrtc) != HAL_OK)
@@ -95,31 +72,57 @@ void MX_RTC_Init(void)
     Error_Handler();
   }
 
-  /** Initialize RTC and set the Time and Date
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR3) != 0x32F2)
+    {
+      /* Configure RTC Calendar */
+    /* USER CODE END Check_RTC_BKUP */
+
+    /** Initialize RTC and set the Time and Date
     */
-    /*sTime.Hours = 0x2;
-    sTime.Minutes = 0x2;
-    sTime.Seconds = 0x2;
+    sTime.Hours = 0x2;
+    sTime.Minutes = 0x0;
+    sTime.Seconds = 0x0;
     sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
     sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-    //if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
     if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
-
     {
       Error_Handler();
     }
-    sDate.WeekDay = RTC_WEEKDAY_THURSDAY;
-    sDate.Month = RTC_MONTH_JUNE;
-    sDate.Date = 0x2;
-    sDate.Year = 0x22;
+    sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
+    sDate.Month = RTC_MONTH_MAY;
+    sDate.Date = 0x26;
+    sDate.Year = 0x20;
 
     if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
     {
       Error_Handler();
-    }*/
+    }
+    /* USER CODE BEGIN RTC_Init 2 */
 
     /* Writes a data in a RTC Backup data Register0 */
- // HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR3, 0x32F2);
+    }
+    else
+    {
+      /* Check if the Power On Reset flag is set */
+      if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST) != RESET)
+      {
+        /* Turn on LED3: Power on reset occurred */
+        // BSP_LED_On(LED3);
+      }
+
+      /* Check if Pin Reset flag is set */
+      if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) != RESET)
+      {
+        /* Turn on LED1: External reset occurred */
+        // BSP_LED_On(LED1);
+      }
+    }
+    /* Clear source Reset Flag */
+    __HAL_RCC_CLEAR_RESET_FLAGS();
+
+  /* Writes a data in a RTC Backup data Register0 */
+  // HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);
 
    /** Enable the Alarm A  */
   sAlarm.BinaryAutoClr = RTC_ALARMSUBSECONDBIN_AUTOCLR_NO;
@@ -134,14 +137,6 @@ void MX_RTC_Init(void)
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
-
-  /*while (1){
-        RTC_CalendarShow(aShowTime, aShowDate);
-
-        APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
-
-        HAL_Delay(1000);
-  }*/
 
 }
 
@@ -200,20 +195,7 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* rtcHandle)
   }
 }
 
-static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate)
-{
-  RTC_DateTypeDef sdatestructureget;
-  RTC_TimeTypeDef stimestructureget;
 
-  /* Get the RTC current Time */
-  HAL_RTC_GetTime(&hrtc, &stimestructureget, RTC_FORMAT_BIN);
-  /* Get the RTC current Date */
-  HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
-  /* Display time Format : hh:mm:ss */
-  sprintf((char *)showtime, "%2d:%2d:%2d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
-  /* Display date Format : mm-dd-yy */
-  sprintf((char *)showdate, "%2d-%2d-%2d", sdatestructureget.Month, sdatestructureget.Date, 2000 + sdatestructureget.Year);
-}
 
 
 /* USER CODE BEGIN 1 */

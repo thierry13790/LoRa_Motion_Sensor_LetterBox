@@ -56,6 +56,8 @@ VL53L0X_Dev_t  vl53l0x_c; // center module
 VL53L0X_DEV    Dev = &vl53l0x_c;
 
 volatile uint8_t TofDataRead;
+volatile uint8_t SendEpoch=0;
+volatile uint8_t NightMode=0;
 
 extern I2C_HandleTypeDef hI2cHandler;
 
@@ -65,14 +67,11 @@ extern RTC_HandleTypeDef hrtc;
 #define VL53L0X_ID                    ((uint16_t)0xEEAA)
 #define VL53L0X_XSHUT_Pin GPIO_PIN_5
 #define VL53L0X_XSHUT_GPIO_Port GPIOA
-
-
 #define VL53L0X_INT_Pin GPIO_PIN_6
 #define VL53L0X_INT_Port GPIOA
 #define VL53L0X_INT_EXTI_IRQn EXTI2_IRQHandler
 
 #define MAX_TS_SIZE (int) 16
-
 
 uint16_t Proximity_Test(void);
 
@@ -81,17 +80,6 @@ static void VL53L0X_PROXIMITY_DeMspInit(void);
 static uint16_t VL53L0X_PROXIMITY_GetDistance(void);
 static VL53L0X_Error VL53L0X_PROXIMITY_Init(void);
 static void VL53L0X_PROXIMITY_DeInit(void);
-
-
-static void TimestampNow_Calendar_Time(uint8_t *buff, uint16_t *size);
-
-/**
-  * @brief  Display the current time and date.
-  * @param  showtime : pointer to buffer
-  * @param  showdate : pointer to buffer
-  * @retval None
-  */
-static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate);
 
 /* USER CODE END EV */
 
@@ -295,11 +283,6 @@ void LoRaWAN_Init(void)
           (uint8_t)(__SUBGHZ_PHY_VERSION >> __APP_VERSION_SUB1_SHIFT),
           (uint8_t)(__SUBGHZ_PHY_VERSION >> __APP_VERSION_SUB2_SHIFT));
 
-  /*SysTime_t UnixEpoch;
-  UnixEpoch.Seconds=1654333930;
-  UnixEpoch.SubSeconds=0;
-  SysTimeSet(UnixEpoch);*/
-
   UTIL_TIMER_Create(&TxLedTimer, 0xFFFFFFFFU, UTIL_TIMER_ONESHOT, OnTxTimerLedEvent, NULL);
   UTIL_TIMER_Create(&RxLedTimer, 0xFFFFFFFFU, UTIL_TIMER_ONESHOT, OnRxTimerLedEvent, NULL);
   UTIL_TIMER_Create(&JoinLedTimer, 0xFFFFFFFFU, UTIL_TIMER_PERIODIC, OnJoinTimerLedEvent, NULL);
@@ -307,15 +290,9 @@ void LoRaWAN_Init(void)
   UTIL_TIMER_SetPeriod(&RxLedTimer, 500);
   UTIL_TIMER_SetPeriod(&JoinLedTimer, 500);
 
-  // GetBatteryLevel();
-
-  //APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053X test  ");
-
-
   /* USER CODE END LoRaWAN_Init_1 */
 
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_LmHandlerProcess), UTIL_SEQ_RFU, LmHandlerProcess);
-
 
   // Send data TX Task : SendTxData
 
@@ -335,18 +312,6 @@ void LoRaWAN_Init(void)
 
   LmHandlerJoin(ActivationType);
 
-  /* Buffers used for displaying Time and Date */
-//    uint8_t aShowTime[16] = "hh:ms:ss";
-  //  uint8_t aShowDate[16] = "dd-mm-yyyy";
-
-
-  //while (1){
-   //       RTC_CalendarShow(aShowTime, aShowDate);
-
-     //     APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
-
-  //        HAL_Delay(1000);
-  //  }
   error= VL53L0X_PROXIMITY_Init();
 
   if (error==VL53L0X_ERROR_NONE)
@@ -470,29 +435,11 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
         break;
       case LORAWAN_USER_APP_PORT:
 
-        /*if (appData->BufferSize == 1)
-        {
-          AppLedStateOn = appData->Buffer[0] & 0x01;
-          if (AppLedStateOn == RESET)
-          {
-            APP_LOG(TS_OFF, VLEVEL_H,   "LED OFF\r\n");
-            BSP_LED_Off(LED_RED) ;
-          }
-          else
-          {
-            APP_LOG(TS_OFF, VLEVEL_H, "LED ON\r\n");
-            BSP_LED_On(LED_RED) ;
-
-
-
-          }
-        }*/
-
-        switch (appData->Buffer[0])
+    	switch (appData->Buffer[0])
 	    {
 		  case 0:
 		  {
-			  // UnixEpoch.Seconds=1654333930;
+			  /* UnixEpoch.Seconds=1654333930; Means 4 june 2022 */
 
 			  UnixEpoch.Seconds = (uint32_t) appData->Buffer[1] << 24;
 			  UnixEpoch.Seconds |=  (uint32_t) appData->Buffer[2] << 16;
@@ -508,7 +455,8 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 		  }
 		  case 1:
 		  {
-			break;
+			  SendEpoch=1;
+			  break;
 		  }
 		  case 2:
 		  {
@@ -534,165 +482,135 @@ static void SendTxData(void)
   UTIL_TIMER_Time_t nextTxIn = 0;
   uint32_t i = 0;
   VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
+  struct tm localtime;
 
-  /* Buffers used for displaying Time and Date */
-  uint8_t aShowTime[16] = "hh:ms:ss";
-  uint8_t aShowDate[16] = "dd-mm-yyyy";
+  /* Let's check if call is during the night */
 
-  APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 adress %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
+  SysTime_t  UnixEpoch= SysTimeGet();
 
-  SENSOR_IO_Init();
+  UnixEpoch.Seconds-=18; //removing leap seconds
+  UnixEpoch.Seconds+=3600*2; // adding 2 hours
 
-  Dev->I2cHandle = &hI2cHandler;
-  Dev->I2cDevAddr = 0x52;
+  SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
 
-  TofDataRead = 0;
+  APP_LOG(TS_OFF, VLEVEL_M,"it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+  		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
+     	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
 
-  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-  error=VL53L0X_StartMeasurement(Dev);
-
-  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
-
-  HAL_Delay(50); // We let 50 ms for measure only then will timeout in case no result and we will stop measure
-
-  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
-
-  if((TofDataRead == 1) && (error==VL53L0X_ERROR_NONE))
+  if (localtime.tm_hour>=20 || localtime.tm_hour<8)
   {
-	  length=RangingData.RangeMilliMeter;
-	  TofDataRead = 0;
-
-      APP_LOG(TS_ON, VLEVEL_M, "there's new data's, Measured distance: %i\n\r", length);
-
-      SENSOR_IO_DeInit();
-
-      AppData.Buffer[i++]=0; // No error
-
-      if (length<TOUCH_DISTANCE)
-      {
-	    AppData.Buffer[i++]=1; // Touch
-		APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
-      }
-      else // No Touch
-      {
-		AppData.Buffer[i++]=0; // Touch
-      } // End there's data and no errors
-
-      /* Read System time Unix Epoch time */
-
-      // void SysTimeSet( SysTime_t sysTime )
-
-      struct tm localtime;
-
-      SysTime_t  UnixEpoch= SysTimeGet();
-
-      // UnixEpoch.Seconds=1654331790;  // Today
-
-      UnixEpoch.Seconds-=18; //removing leap seconds
-      UnixEpoch.Seconds+=3600*2; // adding 2 hours
-
-      SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
-
-	  APP_LOG(TS_OFF, VLEVEL_M,"it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
-			  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
-			  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
-
-
-      /*
-
-      SysTime_t UnixEpoch = SysTimeGet();
-      struct tm localtime;
-      UnixEpoch.Seconds-=18; //removing leap seconds
-      UnixEpoch.Seconds+=3600*2; // adding 2 hours
-      SysTimeLocalTime(UnixEpoch.Seconds, & localtime);
-      PRINTF ("it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
-
-
-      */
-
-
-
-
-
-// while (1){
-      /* Display the updated Time and Date */
-     //  RTC_CalendarShow(aShowTime, aShowDate);
-
-      // APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
-
-     // HAL_Delay(1000);
-// }
-      /* @param [IN]  timestamp The time since UNIX epoch to convert into calendar time.
-      * @param [OUT] localtime Pointer to the calendar time object which will contain
-      the result of the conversion.
-      */
-      // void SysTimeLocalTime( const uint32_t timestamp, struct tm *localtime );
-
-
-
+	 NightMode=1;
+	 APP_LOG(TS_OFF, VLEVEL_M,"Night Mode : ZZZZZ...\n\r");
 
   }
-  else /* TofDataRead != 1 && VL053 error*/
+  else
   {
-	  AppData.Buffer[i++]=1; // Error
-	  AppData.Buffer[i++]=2; // no distance detected so error !!!!
+	 NightMode=0;
+	 APP_LOG(TS_OFF, VLEVEL_M,"Day light Mode \n\r");
+  }
 
-	  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
+  if (!NightMode)
+  {
 
+	  APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 adress %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
 
-	  HAL_Delay(2000);
-	  error=VL53L0X_StopMeasurement(Dev);
+	  SENSOR_IO_Init();
 
-	  APP_LOG(TS_ON, VLEVEL_L, "Stop measure status = %d\r\n", error);
+	  Dev->I2cHandle = &hI2cHandler;
+	  Dev->I2cDevAddr = 0x52;
 
-	  error=VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+	  TofDataRead = 0;
+
+	  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+	  error=VL53L0X_StartMeasurement(Dev);
+
+	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
+
+	  HAL_Delay(50); // We let 50 ms for measure only then will timeout in case no result and we will stop measure
 
 	  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 
-	  APP_LOG(TS_ON, VLEVEL_L, "Clear Interrupt on VL status = %d\r\n", error);
+	  if((TofDataRead == 1) && (error==VL53L0X_ERROR_NONE))
+	  {
+		  length=RangingData.RangeMilliMeter;
+		  TofDataRead = 0;
 
-	  HAL_Delay(2000);
-  }
+		  APP_LOG(TS_ON, VLEVEL_M, "there's new data's, Measured distance: %i\n\r", length);
 
-  AppData.Buffer[i++] = GetBatteryLevel();       /* 1 (very low) to 100 (fully charged) */
-  APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
+		  SENSOR_IO_DeInit();
 
-  AppData.Port = LORAWAN_USER_APP_PORT;
-  AppData.BufferSize = i;
+		  AppData.Buffer[i++]=0; // No error
 
-  BSP_LED_On(LED_GREEN) ;
+		  if (length<TOUCH_DISTANCE)
+		  {
+			AppData.Buffer[i++]=1; // Touch
+			APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+		  }
+		  else // No Touch
+		  {
+			AppData.Buffer[i++]=0; // Touch
+		  } // End there's data and no errors
 
-  UTIL_TIMER_Start(&TxLedTimer);
+	  }
+	  else /* TofDataRead != 1 && VL053 error*/
+	  {
+		  AppData.Buffer[i++]=1; // Error
+		  AppData.Buffer[i++]=2; // no distance detected so error !!!!
 
-  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+		  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
+
+
+		  HAL_Delay(2000);
+		  error=VL53L0X_StopMeasurement(Dev);
+
+		  APP_LOG(TS_ON, VLEVEL_L, "Stop measure status = %d\r\n", error);
+
+		  error=VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
+
+		  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
+
+		  APP_LOG(TS_ON, VLEVEL_L, "Clear Interrupt on VL status = %d\r\n", error);
+
+		  HAL_Delay(2000);
+	  }
+
+	  AppData.Buffer[i++] = GetBatteryLevel();       /* 1 (very low) to 100 (fully charged) */
+	  APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
+
+	  if (SendEpoch) /* Need to send epoch Time */
+	  {
+		  APP_LOG(TS_OFF, VLEVEL_M,"Epoch Time =%02d\n\r",UnixEpoch.Seconds);
+
+		  AppData.Buffer[i++] = UnixEpoch.Seconds >> 24;
+		  AppData.Buffer[i++] = UnixEpoch.Seconds >> 16;
+		  AppData.Buffer[i++] = UnixEpoch.Seconds >>  8;
+		  AppData.Buffer[i++] = UnixEpoch.Seconds;
+
+	  }
+
+	  AppData.Port = LORAWAN_USER_APP_PORT;
+	  AppData.BufferSize = i;
+
+	  // BSP_LED_On(LED_GREEN) ;
+
+	  UTIL_TIMER_Start(&TxLedTimer);
+
+	  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+	  {
+		  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
+	  }
+	  else if (nextTxIn > 0)
+	  {
+			  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
+	  }
+	  //BSP_LED_Off(LED_GREEN);
+  } // Day mode
+  else
   {
-	  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
+	// Nigh mode
   }
-  else if (nextTxIn > 0)
-  {
-		  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
-  }
-  BSP_LED_Off(LED_GREEN) ;
-
-  /*if (AppData.Buffer[1]==2) // there was problem measuring distance
-	  // HAL_Delay(1000); // Not possible else we do not allow to send data
-	  NVIC_SystemReset();*/
-
-    /* USER CODE END SendTxData_1 */
-}
-
-static void TimestampNow_Calendar_Time(uint8_t *buff, uint16_t *size)
-{
-  /* USER CODE BEGIN TimestampNow_1 */
-
-  /* USER CODE END TimestampNow_1 */
-  SysTime_t curtime = SysTimeGet();
-  // tiny_snprintf_like((char *)buff, MAX_TS_SIZE, "%ds%03d:", curtime.Seconds, curtime.SubSeconds);
-  // *size = strlen((char *)buff);
-  /* USER CODE BEGIN TimestampNow_2 */
-
-  /* USER CODE END TimestampNow_2 */
+	  /* USER CODE END SendTxData_1 */
 }
 
 static void OnTxTimerEvent(void *context)
@@ -763,11 +681,7 @@ static void OnTxData(LmHandlerTxParams_t *params)
 static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
 {
 
-	//uint32_t i = 0;
-
-	//VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
-
-	/* USER CODE BEGIN OnJoinRequest_1 */
+  /* USER CODE BEGIN OnJoinRequest_1 */
 
 
   if (joinParams != NULL)
@@ -789,8 +703,6 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
         UTIL_TIMER_Start(&TxTimer);
 
         SendTxData();
-
-
       }
     }
     else
@@ -822,14 +734,7 @@ static void OnMacProcessNotify(void)
 uint16_t Proximity_Test(void)
 {
   uint16_t prox_value = 0;
-
-  // VL53L0X_PROXIMITY_Init();
-
   prox_value = VL53L0X_PROXIMITY_GetDistance();
-
-
-//PP_LOG(TS_OFF, VLEVEL_M, "\r\nDISTANCE is = %d mm\r\n",prox_value);
-
   VL53L0X_PROXIMITY_DeInit();
 
   return(prox_value);
@@ -863,66 +768,9 @@ static VL53L0X_Error VL53L0X_PROXIMITY_Init(void)
   error=VL53L0X_PerformRefCalibration(Dev, &VhvSettings, &PhaseCal);
   error=VL53L0X_PerformRefSpadManagement(Dev, &refSpadCount, &isApertureSpads);
 
-  // VL53L0X_SetInterMeasurementPeriodMilliSeconds(Dev,10000);
-
-  // uint32_t duration;
-
-  //VL53L0X_GetInterMeasurementPeriodMilliSeconds(Dev,&duration);
-
-  // APP_LOG(TS_OFF, VLEVEL_M, "Duration: %i\n\r", duration);
-
-  // error=VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_CONTINUOUS_TIMED_RANGING);
-
   error=VL53L0X_SetDeviceMode(Dev, VL53L0X_DEVICEMODE_SINGLE_RANGING);
 
-  // HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
   return (error);
-
-  // error=VL53L0X_StartMeasurement(Dev);
-
-
- /*while (TofDataRead != 1)
-
- TofDataRead = 0;
- if (RangingData.RangeMilliMeter < 100)
-  	 APP_LOG(TS_OFF, VLEVEL_M, "Measured distance: %i\n\r", RangingData.RangeMilliMeter);*/
-
-
-#if 0
-
-
-  memset(&VL53L0X_DeviceInfo, 0, sizeof(VL53L0X_DeviceInfo_t));
-
-  if (VL53L0X_ERROR_NONE == VL53L0X_GetDeviceInfo(&Dev, &VL53L0X_DeviceInfo))
-  {
-    if (VL53L0X_ERROR_NONE == VL53L0X_RdWord(&Dev, VL53L0X_REG_IDENTIFICATION_MODEL_ID, (uint16_t *) &vl53l0x_id))
-    {
-      if (vl53l0x_id == VL53L0X_ID)
-      {
-        if (VL53L0X_ERROR_NONE == VL53L0X_DataInit(&Dev))
-        {
-          Dev.Present = 1;
-          SetupSingleShot(Dev);
-        }
-        else
-        {
-          APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to send its ID!\r\n");
-        }
-      }
-    }
-    else
-    {
-      APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to Initialize!\r\n");
-    }
-  }
-  else
-  {
-
-	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL53L0X Time of Flight Failed to get infos!\r\n");
-  }
-
-#endif
 
 }
 
@@ -935,7 +783,6 @@ static void VL53L0X_PROXIMITY_DeInit(void)
 {
 
   /* DeInitialize IO interface */
-  // SENSOR_IO_DeInit();
   VL53L0X_PROXIMITY_DeMspInit();
 }
 
@@ -988,22 +835,6 @@ static void VL53L0X_PROXIMITY_DeMspInit(void)
   HAL_Delay(100);
 }
 
-static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate)
-{
-  RTC_DateTypeDef sdatestructureget;
-  RTC_TimeTypeDef stimestructureget;
-
-  /* Get the RTC current Time */
-  HAL_RTC_GetTime(&hrtc, &stimestructureget, RTC_FORMAT_BIN);
-  /* Get the RTC current Date */
-  HAL_RTC_GetDate(&hrtc, &sdatestructureget, RTC_FORMAT_BIN);
-  /* Display time Format : hh:mm:ss */
-  sprintf((char *)showtime, "%2d:%2d:%2d", stimestructureget.Hours, stimestructureget.Minutes, stimestructureget.Seconds);
-  //sprintf((char *)showtime, "%2d",stimestructureget.SubSeconds);
-
-  /* Display date Format : mm-dd-yy */
-  sprintf((char *)showdate, "%2d-%2d-%2d", sdatestructureget.Month, sdatestructureget.Date, 2000 + sdatestructureget.Year);
-}
 
 
 
