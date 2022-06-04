@@ -497,16 +497,18 @@ static void SendTxData(void)
   		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
      	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
 
-  if (localtime.tm_hour>=20 || localtime.tm_hour<8)
+  if ( (localtime.tm_hour>=20 || localtime.tm_hour<8) && ( localtime.tm_year + 1900)!=1970 )
   {
 	 NightMode=1;
 	 APP_LOG(TS_OFF, VLEVEL_M,"Night Mode : ZZZZZ...\n\r");
+	 BSP_LED_On(LED_BLUE);
 
   }
   else
   {
 	 NightMode=0;
 	 APP_LOG(TS_OFF, VLEVEL_M,"Day light Mode \n\r");
+	 BSP_LED_Off(LED_BLUE);
   }
 
   if (!NightMode)
