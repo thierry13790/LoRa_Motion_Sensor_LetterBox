@@ -226,8 +226,8 @@ void UTIL_LPM_EnterLowPower( void )
      * At least one user disallows Stop Mode
      * SLEEP mode is required
      */
-      UTIL_PowerDriver.EnterSleepMode( );
-      UTIL_PowerDriver.ExitSleepMode( );
+     UTIL_PowerDriver.EnterSleepMode( );
+     UTIL_PowerDriver.ExitSleepMode( );
   }
   else
   { 

@@ -38,12 +38,12 @@ void MX_RTC_Init(void)
 
   RTC_AlarmTypeDef sAlarm = {0};
 
-  RTC_TimeTypeDef sTime = {0};
+  /*RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
 
   /* Buffers used for displaying Time and Date */
-    uint8_t aShowTime[16] = "hh:ms:ss";
-    uint8_t aShowDate[16] = "dd-mm-yyyy";
+   // uint8_t aShowTime[16] = "hh:ms:ss";
+    //uint8_t aShowDate[16] = "dd-mm-yyyy";
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -75,9 +75,9 @@ void MX_RTC_Init(void)
   hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  hrtc.Init.BinMode = RTC_BINARY_MIX;
-
-  // hrtc.Init.BinMode = RTC_BINARY_ONLY;
+  // hrtc.Init.BinMode = RTC_BINARY_MIX;
+  // hrtc.Init.BinMode = RTC_BINARY_NONE;
+  hrtc.Init.BinMode = RTC_BINARY_ONLY;
 
   if (HAL_RTC_Init(&hrtc) != HAL_OK)
   {
@@ -97,7 +97,7 @@ void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
     */
-    sTime.Hours = 0x2;
+    /*sTime.Hours = 0x2;
     sTime.Minutes = 0x2;
     sTime.Seconds = 0x2;
     sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
@@ -116,13 +116,12 @@ void MX_RTC_Init(void)
     if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
     {
       Error_Handler();
-    }
+    }*/
 
     /* Writes a data in a RTC Backup data Register0 */
-  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);
+ // HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);
 
-  /** Enable the Alarm A
-  */
+   /** Enable the Alarm A  */
   sAlarm.BinaryAutoClr = RTC_ALARMSUBSECONDBIN_AUTOCLR_NO;
   sAlarm.AlarmTime.SubSeconds = 0x0;
   sAlarm.AlarmMask = RTC_ALARMMASK_NONE;

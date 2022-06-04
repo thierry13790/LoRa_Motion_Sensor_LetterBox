@@ -295,6 +295,11 @@ void LoRaWAN_Init(void)
           (uint8_t)(__SUBGHZ_PHY_VERSION >> __APP_VERSION_SUB1_SHIFT),
           (uint8_t)(__SUBGHZ_PHY_VERSION >> __APP_VERSION_SUB2_SHIFT));
 
+  /*SysTime_t UnixEpoch;
+  UnixEpoch.Seconds=1654333930;
+  UnixEpoch.SubSeconds=0;
+  SysTimeSet(UnixEpoch);*/
+
   UTIL_TIMER_Create(&TxLedTimer, 0xFFFFFFFFU, UTIL_TIMER_ONESHOT, OnTxTimerLedEvent, NULL);
   UTIL_TIMER_Create(&RxLedTimer, 0xFFFFFFFFU, UTIL_TIMER_ONESHOT, OnRxTimerLedEvent, NULL);
   UTIL_TIMER_Create(&JoinLedTimer, 0xFFFFFFFFU, UTIL_TIMER_PERIODIC, OnJoinTimerLedEvent, NULL);
@@ -331,17 +336,17 @@ void LoRaWAN_Init(void)
   LmHandlerJoin(ActivationType);
 
   /* Buffers used for displaying Time and Date */
-    uint8_t aShowTime[16] = "hh:ms:ss";
-    uint8_t aShowDate[16] = "dd-mm-yyyy";
+//    uint8_t aShowTime[16] = "hh:ms:ss";
+  //  uint8_t aShowDate[16] = "dd-mm-yyyy";
 
 
-  while (1){
-          RTC_CalendarShow(aShowTime, aShowDate);
+  //while (1){
+   //       RTC_CalendarShow(aShowTime, aShowDate);
 
-          APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
+     //     APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
 
-          HAL_Delay(1000);
-    }
+  //        HAL_Delay(1000);
+  //  }
   error= VL53L0X_PROXIMITY_Init();
 
   if (error==VL53L0X_ERROR_NONE)
@@ -421,6 +426,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 {
   /* USER CODE BEGIN OnRxData_1 */
+
+  SysTime_t UnixEpoch;
+
   if ((appData != NULL) || (params != NULL))
   {
     BSP_LED_On(LED_BLUE) ;
@@ -461,7 +469,8 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
         }
         break;
       case LORAWAN_USER_APP_PORT:
-        if (appData->BufferSize == 1)
+
+        /*if (appData->BufferSize == 1)
         {
           AppLedStateOn = appData->Buffer[0] & 0x01;
           if (AppLedStateOn == RESET)
@@ -473,8 +482,41 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
           {
             APP_LOG(TS_OFF, VLEVEL_H, "LED ON\r\n");
             BSP_LED_On(LED_RED) ;
+
+
+
           }
-        }
+        }*/
+
+        switch (appData->Buffer[0])
+	    {
+		  case 0:
+		  {
+			  // UnixEpoch.Seconds=1654333930;
+
+			  UnixEpoch.Seconds = (uint32_t) appData->Buffer[1] << 24;
+			  UnixEpoch.Seconds |=  (uint32_t) appData->Buffer[2] << 16;
+			  UnixEpoch.Seconds |= (uint32_t) appData->Buffer[3] << 8;
+			  UnixEpoch.Seconds |= (uint32_t) appData->Buffer[4];
+			  UnixEpoch.SubSeconds=0;
+
+			  APP_LOG(TS_OFF, VLEVEL_H, "Set Time %d \r\n",UnixEpoch.Seconds);
+
+			  SysTimeSet(UnixEpoch);
+
+		    break;
+		  }
+		  case 1:
+		  {
+			break;
+		  }
+		  case 2:
+		  {
+		    break;
+		  }
+		  default:
+		    break;
+	    }
         break;
 
       default:
@@ -537,16 +579,47 @@ static void SendTxData(void)
 		AppData.Buffer[i++]=0; // Touch
       } // End there's data and no errors
 
-      // Read System time
+      /* Read System time Unix Epoch time */
 
-      SysTime_t curtime = SysTimeGet();
+      // void SysTimeSet( SysTime_t sysTime )
 
-      //APP_LOG(TS_OFF, VLEVEL_M,"Seconds=%d Subseconds=%d \n\r",curtime.Seconds,curtime.SubSeconds);
+      struct tm localtime;
+
+      SysTime_t  UnixEpoch= SysTimeGet();
+
+      // UnixEpoch.Seconds=1654331790;  // Today
+
+      UnixEpoch.Seconds-=18; //removing leap seconds
+      UnixEpoch.Seconds+=3600*2; // adding 2 hours
+
+      SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
+
+	  APP_LOG(TS_OFF, VLEVEL_M,"it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+			  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
+			  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
+
+
+      /*
+
+      SysTime_t UnixEpoch = SysTimeGet();
+      struct tm localtime;
+      UnixEpoch.Seconds-=18; //removing leap seconds
+      UnixEpoch.Seconds+=3600*2; // adding 2 hours
+      SysTimeLocalTime(UnixEpoch.Seconds, & localtime);
+      PRINTF ("it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+
+
+      */
+
+
+
+
+
 // while (1){
       /* Display the updated Time and Date */
-      RTC_CalendarShow(aShowTime, aShowDate);
+     //  RTC_CalendarShow(aShowTime, aShowDate);
 
-      APP_LOG(TS_OFF, VLEVEL_M,"Time Subseconds=%s Date=%s \n\r",aShowTime,aShowDate);
+      // APP_LOG(TS_OFF, VLEVEL_M,"Time=%s Date=%s \n\r",aShowTime,aShowDate);
 
      // HAL_Delay(1000);
 // }
@@ -557,11 +630,7 @@ static void SendTxData(void)
       // void SysTimeLocalTime( const uint32_t timestamp, struct tm *localtime );
 
 
-      struct tm *localtime;
 
-      SysTimeLocalTime(curtime.Seconds,localtime);
-
-      APP_LOG(TS_OFF, VLEVEL_M,"day=%i hour=%i seconds=%i",localtime->tm_mday,localtime->tm_hour,localtime->tm_sec);
 
   }
   else /* TofDataRead != 1 && VL053 error*/
