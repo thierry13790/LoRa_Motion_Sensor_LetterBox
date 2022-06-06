@@ -229,7 +229,7 @@ static LmHandlerAppData_t AppData = { 0, 0, AppDataBuffer };
 /**
   * @brief Specifies the state of the application LED
   */
-static uint8_t AppLedStateOn = RESET;
+//static uint8_t AppLedStateOn = RESET;
 
 /**
   * @brief Timer to handle the application Tx Led to toggle
@@ -455,7 +455,7 @@ static void OnRxData(LmHandlerAppData_t *appData, LmHandlerRxParams_t *params)
 		  }
 		  case 1:
 		  {
-			  SendEpoch=1;
+			  SendEpoch=1; /* We will send Epoch time at next Sending of data's */
 			  break;
 		  }
 		  case 2:
@@ -483,55 +483,47 @@ static void SendTxData(void)
   uint32_t i = 0;
   VL53L0X_Error error=VL53L0X_ERROR_UNDEFINED;
   struct tm localtime;
+  SysTime_t  UnixEpoch;
+
+  AppData.Port = LORAWAN_USER_APP_PORT;
 
   /* Let's check if call is during the night */
 
-  SysTime_t  UnixEpoch;
-
   UnixEpoch= SysTimeGet();
 
-  // UnixEpoch= SysTimeGet_T();
+  SysTimeSetBKUPWrite(UnixEpoch); /* In case there's a POR or NVIC System Reset we store inside RTC Bkup register Value to be able */
+   	   	   	   	   	   	   	   	  /* To restore it at next POR or next NVIC System Reset using function MX_RTC_Init */
+  	  	  	  	  	  	  	  	  /* To be able to restore it's needed VBAT power supply at least if POR, thus VBAT pin must be
+  	  	  	  	  	  	  	  	  *  Connected to a battery */
 
-  SysTimeSetBKUPWrite(UnixEpoch);
+  /* It's because i'm living on UTC time */
 
   UnixEpoch.Seconds-=18; //removing leap seconds
   UnixEpoch.Seconds+=3600*2; // adding 2 hours
 
   SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
 
-  APP_LOG(TS_OFF, VLEVEL_M,"Thierry Hour : it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+  APP_LOG(TS_OFF, VLEVEL_M,"Epoch UTC it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
   		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
      	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
-
-  UnixEpoch= SysTimeGet();
-
-  UnixEpoch.Seconds-=18; //removing leap seconds
-  UnixEpoch.Seconds+=3600*2; // adding 2 hours
-
-  SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
-
-  APP_LOG(TS_OFF, VLEVEL_M,"Epoch it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
-    		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
-       	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
 
   if ( (localtime.tm_hour>=20 || localtime.tm_hour<8) && ( localtime.tm_year + 1900)!=1970 )
   {
 	 NightMode=0; //1
 	 APP_LOG(TS_OFF, VLEVEL_M,"Night Mode : ZZZZZ...\n\r");
-	 BSP_LED_On(LED_BLUE);
-
+	 // BSP_LED_On(LED_BLUE);
   }
   else
   {
 	 NightMode=0;
 	 APP_LOG(TS_OFF, VLEVEL_M,"Day light Mode \n\r");
-	 BSP_LED_Off(LED_BLUE);
+	 // BSP_LED_Off(LED_BLUE);
   }
 
   if (!NightMode)
   {
 
-	  APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 adress %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
+	  APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 address %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
 
 	  SENSOR_IO_Init();
 
@@ -546,7 +538,7 @@ static void SendTxData(void)
 
 	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
 
-	  HAL_Delay(50); // We let 50 ms for measure only then will timeout in case no result and we will stop measure
+	  HAL_Delay(50); /* We let 50 ms for measure only then will timeout in case no result and we will stop measure */
 
 	  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 
@@ -579,7 +571,6 @@ static void SendTxData(void)
 
 		  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
 
-
 		  HAL_Delay(2000);
 		  error=VL53L0X_StopMeasurement(Dev);
 
@@ -606,9 +597,10 @@ static void SendTxData(void)
 		  AppData.Buffer[i++] = UnixEpoch.Seconds >>  8;
 		  AppData.Buffer[i++] = UnixEpoch.Seconds;
 
+		  SendEpoch=0;
 	  }
 
-	  AppData.Port = LORAWAN_USER_APP_PORT;
+	  // AppData.Port = LORAWAN_USER_APP_PORT;
 	  AppData.BufferSize = i;
 
 	  // BSP_LED_On(LED_GREEN) ;
@@ -627,7 +619,7 @@ static void SendTxData(void)
   } // Day mode
   else
   {
-	// Nigh mode
+	// Nigh mode, nothing to do
   }
 	  /* USER CODE END SendTxData_1 */
 }
@@ -651,12 +643,8 @@ static void OnTxTimerLedEvent(void *context)
 {
   BSP_LED_Off(LED_GREEN) ;
   if (AppData.Buffer[1]==2) // there was problem measuring distance
-  { 	  // HAL_Delay(1000); // Not possible else we do not allow to send data
-	  //SysTime_t  UnixEpoch= SysTimeGet();
-      // UnixEpoch.Seconds=UnixEpoch.Seconds+5;
-      // SysTimeSetBKUPWrite(UnixEpoch);
-      // HAL_Delay(2000);
-   	  NVIC_SystemReset();
+  {
+    NVIC_SystemReset();
   }
 }
 
@@ -733,11 +721,6 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
     {
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOIN FAILED, reset ... \r\n");
 
-      // HAL_Delay(2000);
-      /*SysTime_t  UnixEpoch= SysTimeGet();
-      UnixEpoch.Seconds+=5;
-      SysTimeSet(UnixEpoch);
-      HAL_Delay(2000);*/
       NVIC_SystemReset();
     }
   }
@@ -825,7 +808,7 @@ static uint16_t VL53L0X_PROXIMITY_GetDistance(void)
 {
   VL53L0X_RangingMeasurementData_t RangingMeasurementData;
 
-  VL53L0X_PerformSingleRangingMeasurement(&Dev, &RangingMeasurementData);
+  VL53L0X_PerformSingleRangingMeasurement(Dev, &RangingMeasurementData);
 
   return RangingMeasurementData.RangeMilliMeter;
 }
@@ -862,8 +845,5 @@ static void VL53L0X_PROXIMITY_DeMspInit(void)
   BSP_PB_DeInit(BUTTON_SW1);
   HAL_Delay(100);
 }
-
-
-
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

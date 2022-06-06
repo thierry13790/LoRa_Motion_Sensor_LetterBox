@@ -24,6 +24,8 @@
 #include "sys_conf.h"
 #include "sys_sensors.h"
 
+
+
 /* USER CODE BEGIN Includes */
 #if defined (SENSOR_ENABLED) && (SENSOR_ENABLED == 1)
 #if defined (X_NUCLEO_IKS01A2)
@@ -199,11 +201,12 @@ int32_t  EnvSensors_Read(sensor_t *sensor_data)
   /* USER CODE END EnvSensors_Read */
 }
 
-int32_t  EnvSensors_Init(void)
+int32_t EnvSensors_Init(void)
 {
   /* USER CODE BEGIN EnvSensors_Init */
 
 	SENSOR_IO_Init();
+
 
 #if defined (SENSOR_ENABLED) && (SENSOR_ENABLED == 1)
   /* Init */

@@ -32,7 +32,6 @@ void     SENSOR_IO_Init(void);
 void     SENSOR_IO_DeInit(void);
 
 
-
 /* User can use this section to tailor I2Cx instance used and associated resources */
 /* Definition for I2Cx resources */
 #define DISCOVERY_I2Cx                             I2C2

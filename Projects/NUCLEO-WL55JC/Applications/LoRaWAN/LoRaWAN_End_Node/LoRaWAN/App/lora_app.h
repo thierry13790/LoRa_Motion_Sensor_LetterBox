@@ -30,8 +30,9 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdint.h"
+//include "main.h"
 
-#define PROTO_MAILBOX
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

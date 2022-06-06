@@ -140,12 +140,12 @@
 		<link>
 			<name>Drivers/STM32WLxx_HAL_Driver/stm32wlxx_hal_i2c.c</name>
 			<type>1</type>
-			<location>C:/Users/thier/STM32Cube/Repository/STM32Cube_FW_WL_V1.1.0/Drivers/STM32WLxx_HAL_Driver/Src/stm32wlxx_hal_i2c.c</location>
+			<locationURI>PARENT-6-PROJECT_LOC/Drivers/STM32WLxx_HAL_Driver/Src/stm32wlxx_hal_i2c.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/STM32WLxx_HAL_Driver/stm32wlxx_hal_i2c_ex.c</name>
 			<type>1</type>
-			<location>C:/Users/thier/STM32Cube/Repository/STM32Cube_FW_WL_V1.1.0/Drivers/STM32WLxx_HAL_Driver/Src/stm32wlxx_hal_i2c_ex.c</location>
+			<locationURI>PARENT-6-PROJECT_LOC/Drivers/STM32WLxx_HAL_Driver/Src/stm32wlxx_hal_i2c_ex.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/STM32WLxx_HAL_Driver/stm32wlxx_hal_pwr.c</name>

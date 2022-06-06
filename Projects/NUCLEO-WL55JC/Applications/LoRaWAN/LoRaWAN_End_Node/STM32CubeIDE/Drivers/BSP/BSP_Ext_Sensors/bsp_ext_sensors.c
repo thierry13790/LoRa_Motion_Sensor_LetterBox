@@ -235,6 +235,7 @@ static void I2Cx_Error(I2C_HandleTypeDef *i2c_handler, uint8_t Addr)
 *******************************************************************************/
 /******************************** LINK Sensors ********************************/
 
+
 /**
   * @brief  Initializes Sensors low level.
   * @retval None

@@ -50,10 +50,11 @@ extern "C"
 /* Exported macros -----------------------------------------------------------*/
 /* Defines -------------------------------------------------------------------*/
 
+/* Because It conflicts with STM32WL HAL ?
 #ifndef SUCCESS
 #define SUCCESS                                     1
 #endif
-
+*/
 #ifndef FAIL
 #define FAIL                                        0
 #endif

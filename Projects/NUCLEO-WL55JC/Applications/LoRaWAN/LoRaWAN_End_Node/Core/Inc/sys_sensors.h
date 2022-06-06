@@ -53,6 +53,8 @@ typedef struct
 
 /* USER CODE BEGIN ET */
 
+extern void     SENSOR_IO_Init(void);
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

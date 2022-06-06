@@ -27,8 +27,6 @@
 
 RTC_HandleTypeDef hrtc;
 
-// static void RTC_CalendarShow(uint8_t *showtime, uint8_t *showdate);
-
 /* RTC init function */
 void MX_RTC_Init(void)
 {
@@ -44,11 +42,9 @@ void MX_RTC_Init(void)
   /* USER CODE BEGIN RTC_Init 1 */
 
   /* USER CODE END RTC_Init 1 */
-  /** Initialize RTC Only
-  */
+  /** Initialize RTC Only */
 
   hrtc.Instance = RTC;
-  // hrtc.Init.HourFormat = RTC_HOURFORMAT_24; // added
   hrtc.Init.AsynchPrediv = RTC_PREDIV_A;
   hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
   hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
@@ -80,7 +76,7 @@ void MX_RTC_Init(void)
 
     /** Initialize RTC and set the Time and Date
     */
-    sTime.Hours = 0x2;
+    sTime.Hours = 0x0;
     sTime.Minutes = 0x0;
     sTime.Seconds = 0x0;
     sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
@@ -89,9 +85,9 @@ void MX_RTC_Init(void)
     {
       Error_Handler();
     }
-    sDate.WeekDay = RTC_WEEKDAY_TUESDAY;
+    sDate.WeekDay = RTC_WEEKDAY_MONDAY;
     sDate.Month = RTC_MONTH_MAY;
-    sDate.Date = 0x26;
+    sDate.Date = 0x1;
     sDate.Year = 0x20;
 
     if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
@@ -108,27 +104,21 @@ void MX_RTC_Init(void)
       /* Check if the Power On Reset flag is set */
       if (__HAL_RCC_GET_FLAG(RCC_FLAG_BORRST) != RESET)
       {
-        /* Turn on LED3: Power on reset occurred */
-        // BSP_LED_On(LED3);
-    	  SysTime_t UnixEpoch= SysTimeGet_T();
-    	  SysTimeSet(UnixEpoch);
+        SysTime_t UnixEpoch= SysTimeGet_T(); /* There was a POR we restore last saved date and time */
+        UnixEpoch.Seconds++;
+    	SysTimeSet(UnixEpoch);
       }
 
       /* Check if Pin Reset flag is set */
       if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) != RESET)
       {
-        /* Turn on LED1: External reset occurred */
-        // BSP_LED_On(LED1);
-    	  SysTime_t UnixEpoch= SysTimeGet_T();
-    	  SysTimeSet(UnixEpoch);
+        SysTime_t UnixEpoch= SysTimeGet_T(); /* There was a NVIC System Reset we restore last saved date and time */
+        UnixEpoch.Seconds++;
+    	SysTimeSet(UnixEpoch);
       }
     }
     /* Clear source Reset Flag */
     __HAL_RCC_CLEAR_RESET_FLAGS();
-
-
-  /* Writes a data in a RTC Backup data Register0 */
-  // HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);
 
    /** Enable the Alarm A  */
   sAlarm.BinaryAutoClr = RTC_ALARMSUBSECONDBIN_AUTOCLR_NO;
@@ -136,6 +126,7 @@ void MX_RTC_Init(void)
   sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
   sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDBINMASK_NONE;
   sAlarm.Alarm = RTC_ALARM_A;
+
   if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, 0) != HAL_OK)
   {
     Error_Handler();
@@ -143,7 +134,6 @@ void MX_RTC_Init(void)
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
-
 }
 
 void HAL_RTC_MspInit(RTC_HandleTypeDef* rtcHandle)
@@ -200,9 +190,6 @@ void HAL_RTC_MspDeInit(RTC_HandleTypeDef* rtcHandle)
   /* USER CODE END RTC_MspDeInit 1 */
   }
 }
-
-
-
 
 /* USER CODE BEGIN 1 */
 
