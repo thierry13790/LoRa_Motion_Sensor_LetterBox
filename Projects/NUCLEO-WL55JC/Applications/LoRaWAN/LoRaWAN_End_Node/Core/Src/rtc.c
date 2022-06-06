@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "rtc.h"
+#include "stm32_systime.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -54,7 +55,7 @@ void MX_RTC_Init(void)
   hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
   hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
   hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  hrtc.Init.BinMode = RTC_BINARY_ONLY;
+  hrtc.Init.BinMode = /*RTC_BINARY_MIX*/ RTC_BINARY_ONLY;
 
   if (HAL_RTC_Init(&hrtc) != HAL_OK)
   {
@@ -72,7 +73,7 @@ void MX_RTC_Init(void)
     Error_Handler();
   }
 
-  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR3) != 0x32F2)
+  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR9) != 0x32F2)
     {
       /* Configure RTC Calendar */
     /* USER CODE END Check_RTC_BKUP */
@@ -100,7 +101,7 @@ void MX_RTC_Init(void)
     /* USER CODE BEGIN RTC_Init 2 */
 
     /* Writes a data in a RTC Backup data Register0 */
-    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR3, 0x32F2);
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR9, 0x32F2);
     }
     else
     {
@@ -109,6 +110,8 @@ void MX_RTC_Init(void)
       {
         /* Turn on LED3: Power on reset occurred */
         // BSP_LED_On(LED3);
+    	  SysTime_t UnixEpoch= SysTimeGet_T();
+    	  SysTimeSet(UnixEpoch);
       }
 
       /* Check if Pin Reset flag is set */
@@ -116,10 +119,13 @@ void MX_RTC_Init(void)
       {
         /* Turn on LED1: External reset occurred */
         // BSP_LED_On(LED1);
+    	  SysTime_t UnixEpoch= SysTimeGet_T();
+    	  SysTimeSet(UnixEpoch);
       }
     }
     /* Clear source Reset Flag */
     __HAL_RCC_CLEAR_RESET_FLAGS();
+
 
   /* Writes a data in a RTC Backup data Register0 */
   // HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, 0x32F2);

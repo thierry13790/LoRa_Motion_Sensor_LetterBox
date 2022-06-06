@@ -139,6 +139,7 @@ uint32_t TIMER_IF_GetTime(uint16_t *subSeconds);
   * @param[in] Seconds time in seconds
   */
 void TIMER_IF_BkUp_Write_Seconds(uint32_t Seconds);
+void TIMER_IF_BkUp_Write_Seconds_T(uint32_t Seconds);
 
 /**
   * @brief reads seconds from backUp register
@@ -146,21 +147,21 @@ void TIMER_IF_BkUp_Write_Seconds(uint32_t Seconds);
   * @return Time in seconds
   */
 uint32_t TIMER_IF_BkUp_Read_Seconds(void);
-
+uint32_t TIMER_IF_BkUp_Read_Seconds_T(void);
 /**
   * @brief writes SubSeconds in backUp register
   * @note Used to store SubSeconds difference between RTC time and Unix time
   * @param[in] SubSeconds time in SubSeconds
   */
 void TIMER_IF_BkUp_Write_SubSeconds(uint32_t SubSeconds);
-
+void TIMER_IF_BkUp_Write_SubSeconds_T(uint32_t SubSeconds);
 /**
   * @brief reads SubSeconds from backUp register
   * @note Used to store SubSeconds difference between RTC time and Unix time
   * @return Time in SubSeconds
   */
 uint32_t TIMER_IF_BkUp_Read_SubSeconds(void);
-
+uint32_t TIMER_IF_BkUp_Read_SubSeconds_T(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

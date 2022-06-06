@@ -240,6 +240,12 @@ void SysTimeSet( SysTime_t sysTime )
   UTIL_SYSTIMDriver.BKUPWrite_SubSeconds( ( uint32_t ) DeltaTime.SubSeconds );
 }
 
+void SysTimeSetBKUPWrite( SysTime_t sysTime )
+{
+  UTIL_SYSTIMDriver.BKUPWrite_Seconds_T( sysTime.Seconds );
+  UTIL_SYSTIMDriver.BKUPWrite_SubSeconds_T( sysTime.SubSeconds );
+}
+
 SysTime_t SysTimeGet( void )
 {
   SysTime_t calendarTime = { .Seconds = 0, .SubSeconds = 0 };
@@ -254,6 +260,16 @@ SysTime_t SysTimeGet( void )
   sysTime = SysTimeAdd( DeltaTime, calendarTime );
 
   return sysTime;
+}
+
+
+SysTime_t SysTimeGet_T( void )
+{
+  SysTime_t calendarTime= { .Seconds = 0, .SubSeconds = 0 };
+  calendarTime.SubSeconds = (int16_t)UTIL_SYSTIMDriver.BKUPRead_SubSeconds_T();
+  calendarTime.Seconds = UTIL_SYSTIMDriver.BKUPRead_Seconds_T();
+  return calendarTime;
+
 }
 
 

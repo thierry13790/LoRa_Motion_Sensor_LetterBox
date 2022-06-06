@@ -69,6 +69,11 @@ const UTIL_SYSTIM_Driver_s UTIL_SYSTIMDriver =
   TIMER_IF_BkUp_Read_Seconds,
   TIMER_IF_BkUp_Write_SubSeconds,
   TIMER_IF_BkUp_Read_SubSeconds,
+
+  TIMER_IF_BkUp_Write_Seconds_T,
+  TIMER_IF_BkUp_Read_Seconds_T,
+  TIMER_IF_BkUp_Write_SubSeconds_T,
+  TIMER_IF_BkUp_Read_SubSeconds_T,
   TIMER_IF_GetTime,
 };
 
@@ -90,17 +95,17 @@ const UTIL_SYSTIM_Driver_s UTIL_SYSTIMDriver =
 /**
   * @brief Backup seconds register
   */
-#define RTC_BKP_SECONDS    RTC_BKP_DR0
-
+#define RTC_BKP_SECONDS    RTC_BKP_DR0 // 0
+#define RTC_BKP_SECONDS_T    RTC_BKP_DR3 // 0
 /**
   * @brief Backup subseconds register
   */
-#define RTC_BKP_SUBSECONDS RTC_BKP_DR1
-
+#define RTC_BKP_SUBSECONDS RTC_BKP_DR1 // 1
+#define RTC_BKP_SUBSECONDS_T RTC_BKP_DR4 // 1
 /**
   * @brief Backup msbticks register
   */
-#define RTC_BKP_MSBTICKS   RTC_BKP_DR2
+#define RTC_BKP_MSBTICKS   RTC_BKP_DR2 // 2
 
 /* #define RTIF_DEBUG */
 
@@ -472,6 +477,55 @@ uint32_t TIMER_IF_BkUp_Read_SubSeconds(void)
   return ret;
 }
 
+void TIMER_IF_BkUp_Write_Seconds_T(uint32_t Seconds)
+{
+  /* USER CODE BEGIN TIMER_IF_BkUp_Write_Seconds */
+
+  /* USER CODE END TIMER_IF_BkUp_Write_Seconds */
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_SECONDS_T, Seconds);
+  /* USER CODE BEGIN TIMER_IF_BkUp_Write_Seconds_Last */
+
+  /* USER CODE END TIMER_IF_BkUp_Write_Seconds_Last */
+}
+
+void TIMER_IF_BkUp_Write_SubSeconds_T(uint32_t SubSeconds)
+{
+  /* USER CODE BEGIN TIMER_IF_BkUp_Write_SubSeconds */
+
+  /* USER CODE END TIMER_IF_BkUp_Write_SubSeconds */
+  HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_SUBSECONDS_T, SubSeconds);
+  /* USER CODE BEGIN TIMER_IF_BkUp_Write_SubSeconds_Last */
+
+  /* USER CODE END TIMER_IF_BkUp_Write_SubSeconds_Last */
+}
+
+uint32_t TIMER_IF_BkUp_Read_Seconds_T(void)
+{
+  uint32_t ret = 0;
+  /* USER CODE BEGIN TIMER_IF_BkUp_Read_Seconds */
+
+  /* USER CODE END TIMER_IF_BkUp_Read_Seconds */
+  ret = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_SECONDS_T);
+  /* USER CODE BEGIN TIMER_IF_BkUp_Read_Seconds_Last */
+
+  /* USER CODE END TIMER_IF_BkUp_Read_Seconds_Last */
+  return ret;
+}
+
+uint32_t TIMER_IF_BkUp_Read_SubSeconds_T(void)
+{
+  uint32_t ret = 0;
+  /* USER CODE BEGIN TIMER_IF_BkUp_Read_SubSeconds */
+
+  /* USER CODE END TIMER_IF_BkUp_Read_SubSeconds */
+  ret = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_SUBSECONDS_T);
+  /* USER CODE BEGIN TIMER_IF_BkUp_Read_SubSeconds_Last */
+
+  /* USER CODE END TIMER_IF_BkUp_Read_SubSeconds_Last */
+  return ret;
+}
+
+
 /* USER CODE BEGIN EF */
 
 /* USER CODE END EF */
@@ -500,6 +554,7 @@ static uint32_t TIMER_IF_BkUp_Read_MSBticks(void)
 
   /* USER CODE END TIMER_IF_BkUp_Read_MSBticks_Last */
 }
+
 
 static inline uint32_t GetTimerTicks(void)
 {

@@ -134,6 +134,11 @@ typedef struct
   uint32_t (*BKUPRead_Seconds) ( void ); /*!< Get the timer differencebetween real time and rtc time */
   void     (*BKUPWrite_SubSeconds) ( uint32_t SubSeconds);  /*!< Set the timer differencebetween real time and rtc time */
   uint32_t (*BKUPRead_SubSeconds) ( void ); /*!< Get the timer differencebetween real time and rtc time */
+
+  void     (*BKUPWrite_Seconds_T) ( uint32_t Seconds);  /*!< Set the timer differencebetween real time and rtc time */
+  uint32_t (*BKUPRead_Seconds_T) ( void ); /*!< Get the timer differencebetween real time and rtc time */
+  void     (*BKUPWrite_SubSeconds_T) ( uint32_t SubSeconds);  /*!< Set the timer differencebetween real time and rtc time */
+  uint32_t (*BKUPRead_SubSeconds_T) ( void ); /*!< Get the timer differencebetween real time and rtc time */
   uint32_t (*GetCalendarTime)( uint16_t* SubSeconds );          /*!< Set the rtc time */
 } UTIL_SYSTIM_Driver_s;
 
@@ -191,12 +196,20 @@ SysTime_t SysTimeSub( SysTime_t a, SysTime_t b );
 void SysTimeSet( SysTime_t sysTime );
 
 /*!
+* @brief Sets Backup registers
+*
+* @param  sysTime    Set registers Seconds and milliseconds
+*/
+
+void SysTimeSetBKUPWrite( SysTime_t sysTime );
+
+/*!
 * @brief Gets current system time
 *
 * @retval sysTime    Current seconds/sub-seconds since UNIX epoch origin
 */
 SysTime_t SysTimeGet( void );
-
+SysTime_t SysTimeGet_T( void );
 /*!
 * @brief Gets current MCU system time
 *

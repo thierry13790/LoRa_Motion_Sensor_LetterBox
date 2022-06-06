@@ -486,20 +486,37 @@ static void SendTxData(void)
 
   /* Let's check if call is during the night */
 
-  SysTime_t  UnixEpoch= SysTimeGet();
+  SysTime_t  UnixEpoch;
+
+  UnixEpoch= SysTimeGet();
+
+  // UnixEpoch= SysTimeGet_T();
+
+  SysTimeSetBKUPWrite(UnixEpoch);
 
   UnixEpoch.Seconds-=18; //removing leap seconds
   UnixEpoch.Seconds+=3600*2; // adding 2 hours
 
   SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
 
-  APP_LOG(TS_OFF, VLEVEL_M,"it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+  APP_LOG(TS_OFF, VLEVEL_M,"Thierry Hour : it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
   		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
      	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
 
+  UnixEpoch= SysTimeGet();
+
+  UnixEpoch.Seconds-=18; //removing leap seconds
+  UnixEpoch.Seconds+=3600*2; // adding 2 hours
+
+  SysTimeLocalTime(UnixEpoch.Seconds, &localtime);
+
+  APP_LOG(TS_OFF, VLEVEL_M,"Epoch it's %02dh%02dm%02ds on %02d/%02d/%04d\n\r",
+    		  localtime.tm_hour, localtime.tm_min, localtime.tm_sec,
+       	  localtime.tm_mday, localtime.tm_mon+1, localtime.tm_year + 1900);
+
   if ( (localtime.tm_hour>=20 || localtime.tm_hour<8) && ( localtime.tm_year + 1900)!=1970 )
   {
-	 NightMode=1;
+	 NightMode=0; //1
 	 APP_LOG(TS_OFF, VLEVEL_M,"Night Mode : ZZZZZ...\n\r");
 	 BSP_LED_On(LED_BLUE);
 
@@ -634,8 +651,13 @@ static void OnTxTimerLedEvent(void *context)
 {
   BSP_LED_Off(LED_GREEN) ;
   if (AppData.Buffer[1]==2) // there was problem measuring distance
-   	  // HAL_Delay(1000); // Not possible else we do not allow to send data
+  { 	  // HAL_Delay(1000); // Not possible else we do not allow to send data
+	  //SysTime_t  UnixEpoch= SysTimeGet();
+      // UnixEpoch.Seconds=UnixEpoch.Seconds+5;
+      // SysTimeSetBKUPWrite(UnixEpoch);
+      // HAL_Delay(2000);
    	  NVIC_SystemReset();
+  }
 }
 
 static void OnRxTimerLedEvent(void *context)
@@ -711,7 +733,11 @@ static void OnJoinRequest(LmHandlerJoinParams_t *joinParams)
     {
       APP_LOG(TS_OFF, VLEVEL_M, "\r\n###### = JOIN FAILED, reset ... \r\n");
 
-      HAL_Delay(2000);
+      // HAL_Delay(2000);
+      /*SysTime_t  UnixEpoch= SysTimeGet();
+      UnixEpoch.Seconds+=5;
+      SysTimeSet(UnixEpoch);
+      HAL_Delay(2000);*/
       NVIC_SystemReset();
     }
   }
