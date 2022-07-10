@@ -53,23 +53,47 @@ extern "C" {
 /**
   * @brief Enable trace logs
   */
+
+#ifdef PROTO_MAILBOX
 #define APP_LOG_ENABLED             1
+#else
+#define APP_LOG_ENABLED             0
+#endif
+
 
 /**
   * @brief Enable MCU Debugger pins (dbg serial wires, sbg spi, etc)
   */
+
+#ifdef PROTO_MAILBOX
 #define DEBUGGER_ENABLED           1
+#else
+#define DEBUGGER_ENABLED           0
+#endif
+
 
 /**
   * @brief Enable four wires usable as probes (two of them PROBE1 and PROBE2 used by the MW)
   */
+
+#ifdef PROTO_MAILBOX
 #define PROBE_PINS_ENABLED         1
+#else
+#define PROBE_PINS_ENABLED         0
+#endif
+
 
 /**
   * @brief Disable Low Power mode
   * @note  0: LowPowerMode enabled. MCU enters stop2 mode, 1: LowPowerMode disabled. MCU enters sleep mode only
   */
+
+#ifdef PROTO_MAILBOX
 #define LOW_POWER_DISABLE 			1
+#else
+#define LOW_POWER_DISABLE 			0
+#endif
+
 
 /* USER CODE BEGIN EC */
 
