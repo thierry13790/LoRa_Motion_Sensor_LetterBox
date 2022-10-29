@@ -58,6 +58,8 @@ VL53L0X_DEV    Dev = &vl53l0x_c;
 volatile uint8_t TofDataRead;
 volatile uint8_t SendEpoch=0;
 volatile uint8_t NightMode=0;
+volatile uint8_t touch=0;
+volatile uint8_t touch_n_minus_1=0;
 
 extern I2C_HandleTypeDef hI2cHandler;
 
@@ -224,7 +226,7 @@ static uint8_t AppDataBuffer[LORAWAN_APP_DATA_BUFFER_MAX_SIZE];
 /**
   * @brief User application data structure
   */
-static LmHandlerAppData_t AppData = { 0, 0, AppDataBuffer };
+static LmHandlerAppData_t AppData = { 199, 0, AppDataBuffer };
 
 /**
   * @brief Specifies the state of the application LED
@@ -485,7 +487,6 @@ static void SendTxData(void)
   struct tm localtime;
   SysTime_t  UnixEpoch;
 
-  AppData.Port = LORAWAN_USER_APP_PORT;
 
   /* Let's check if call is during the night */
 
@@ -520,70 +521,96 @@ static void SendTxData(void)
 	 // BSP_LED_Off(LED_BLUE);
   }
 
-  if (!NightMode)
+  SENSOR_IO_Init();
+
+  Dev->I2cHandle = &hI2cHandler;
+  Dev->I2cDevAddr = 0x52;
+
+  TofDataRead = 0;
+
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  error=VL53L0X_StartMeasurement(Dev);
+
+  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
+
+  HAL_Delay(50); /* We let 50 ms for measure only then will timeout in case no result and we will stop measure */
+
+  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
+
+  // Check if something happened with sensor
+
+  if((TofDataRead == 1) && (error==VL53L0X_ERROR_NONE))
   {
-
-	  APP_LOG(TS_ON, VLEVEL_M, "status: %i, i2 address %x\n\r", Dev->I2cHandle->ErrorCode, Dev->I2cDevAddr);
-
-	  SENSOR_IO_Init();
-
-	  Dev->I2cHandle = &hI2cHandler;
-	  Dev->I2cDevAddr = 0x52;
-
+	  length=RangingData.RangeMilliMeter;
 	  TofDataRead = 0;
 
-	  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+	  APP_LOG(TS_ON, VLEVEL_M, "there's new data's, Measured distance: %i\n\r", length);
 
-	  error=VL53L0X_StartMeasurement(Dev);
+	  SENSOR_IO_DeInit();
 
-	  APP_LOG(TS_OFF, VLEVEL_M, "\r\nVL053x status %d \r\n",error);
+	  AppData.Buffer[i++]=0; // No error
 
-	  HAL_Delay(50); /* We let 50 ms for measure only then will timeout in case no result and we will stop measure */
+	  if (length<TOUCH_DISTANCE)
+	  {
+		AppData.Buffer[i++]=1; // Touch
+		APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
+		touch=1;
+		touch_n_minus_1=1;
+
+	  }
+	  else // No Touch
+	  {
+		AppData.Buffer[i++]=0; // No Touch
+
+		if ((touch_n_minus_1==2) || (touch_n_minus_1==1)) // Need to send 2 TX while switch touch to no touch !!!
+		{
+		 touch=1; // This allow to send no touch one time
+		 touch_n_minus_1++;
+		 APP_LOG(TS_ON, VLEVEL_L, "previous is touch this one is no touch\r\n");
+		}
+		else
+		{
+		 touch=0;
+		 touch_n_minus_1=0;
+		}
+
+
+	  } // End there's data and no errors
+
+  }
+  else /* TofDataRead != 1 && VL053 error*/
+  {
+
+	  AppData.Buffer[i++]=1; // Error
+	  AppData.Buffer[i++]=2; // no distance detected so error !!!!
+
+	  touch=1;
+
+	  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
+
+	  HAL_Delay(2000);
+	  error=VL53L0X_StopMeasurement(Dev);
+
+	  APP_LOG(TS_ON, VLEVEL_L, "Stop measure status = %d\r\n", error);
+
+	  error=VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
 
 	  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
 
-	  if((TofDataRead == 1) && (error==VL53L0X_ERROR_NONE))
-	  {
-		  length=RangingData.RangeMilliMeter;
-		  TofDataRead = 0;
+	  APP_LOG(TS_ON, VLEVEL_L, "Clear Interrupt on VL status = %d\r\n", error);
 
-		  APP_LOG(TS_ON, VLEVEL_M, "there's new data's, Measured distance: %i\n\r", length);
+	  HAL_Delay(2000);
 
-		  SENSOR_IO_DeInit();
+	  //touch=0;
 
-		  AppData.Buffer[i++]=0; // No error
+  } // End if((TofDataRead == 1) && (error==VL53L0X_ERROR_NONE))
 
-		  if (length<TOUCH_DISTANCE)
-		  {
-			AppData.Buffer[i++]=1; // Touch
-			APP_LOG(TS_ON, VLEVEL_M, "\r\nENVOI !!!! DISTANCE is = %d mm\r\n",length);
-		  }
-		  else // No Touch
-		  {
-			AppData.Buffer[i++]=0; // Touch
-		  } // End there's data and no errors
 
-	  }
-	  else /* TofDataRead != 1 && VL053 error*/
-	  {
-		  AppData.Buffer[i++]=1; // Error
-		  AppData.Buffer[i++]=2; // no distance detected so error !!!!
+  if (touch == 1)
+  {
 
-		  APP_LOG(TS_OFF, VLEVEL_M, "Error getting measure or not time measure Measured distance is : %i, error TOF is : %i TofDataRead=%i \n\r", RangingData.RangeMilliMeter,error,TofDataRead);
-
-		  HAL_Delay(2000);
-		  error=VL53L0X_StopMeasurement(Dev);
-
-		  APP_LOG(TS_ON, VLEVEL_L, "Stop measure status = %d\r\n", error);
-
-		  error=VL53L0X_ClearInterruptMask(Dev, VL53L0X_REG_SYSTEM_INTERRUPT_GPIO_NEW_SAMPLE_READY);
-
-		  HAL_NVIC_DisableIRQ(EXTI0_IRQn);
-
-		  APP_LOG(TS_ON, VLEVEL_L, "Clear Interrupt on VL status = %d\r\n", error);
-
-		  HAL_Delay(2000);
-	  }
+	  touch = 0;
 
 	  AppData.Buffer[i++] = GetBatteryLevel();       /* 1 (very low) to 100 (fully charged) */
 	  APP_LOG(TS_ON, VLEVEL_M, "\r\nBattery level is = %d => 0 (very low = 0 volts ) to 100 (fully charged = 2,852 volts)\r\n",AppData.Buffer[i-1]);
@@ -600,14 +627,15 @@ static void SendTxData(void)
 		  SendEpoch=0;
 	  }
 
-	  // AppData.Port = LORAWAN_USER_APP_PORT;
+	  AppData.Port = LORAWAN_USER_APP_PORT;
 	  AppData.BufferSize = i;
+
 
 	  // BSP_LED_On(LED_GREEN) ;
 
 	  UTIL_TIMER_Start(&TxLedTimer);
 
-	  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) && (length < 100))
+	  if ( (LORAMAC_HANDLER_SUCCESS == LmHandlerSend(&AppData, LORAWAN_DEFAULT_CONFIRMED_MSG_STATE, &nextTxIn, false)) /*&& (length < 100)*/)
 	  {
 		  APP_LOG(TS_ON, VLEVEL_L, "SEND REQUEST\r\n");
 	  }
@@ -616,10 +644,12 @@ static void SendTxData(void)
 			  APP_LOG(TS_ON, VLEVEL_L, "No Letter Next Tx in  : ~%d second(s)\r\n", (nextTxIn / 1000));
 	  }
 	  //BSP_LED_Off(LED_GREEN);
-  } // Day mode
-  else
+  }
+  else // no touch nothing to do
   {
-	// Nigh mode, nothing to do
+
+
+
   }
 	  /* USER CODE END SendTxData_1 */
 }
